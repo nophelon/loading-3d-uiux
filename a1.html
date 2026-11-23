@@ -1,0 +1,366 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>파티클 오브 · AI가 만드는 중 (A형)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#07060d;color:#f3f1fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard','Apple SD Gothic Neo',sans-serif;overflow:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+/* 씬이 자체 주입한 오버레이(일부 시안)는 숨기고, 공용 셸 오버레이(.ui/.err)만 보이게 — 카피 중복 방지 */
+body>div:not(.ui):not(.err):not(.scrim){display:none!important}
+.ui{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:22px 26px}
+.logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#8f48f3,#6f2ce0);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(143,72,243,.5)}
+.brand{font-weight:650;font-size:14.5px;letter-spacing:-.01em}
+.brand span{color:#a79fc7;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:999px;background:rgba(143,72,243,.16);color:#cdb9fb;border:1px solid rgba(143,72,243,.3);backdrop-filter:blur(6px)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:#b78bff;box-shadow:0 0 10px 2px rgba(167,114,245,.8);animation:bp 1.6s infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(26px,4.6vw,44px);font-weight:700;letter-spacing:-.025em;line-height:1.1;text-shadow:0 2px 30px rgba(0,0,0,.6)}
+.lede{color:#b9b3d2;font-size:clamp(13.5px,1.5vw,16px);line-height:1.6;max-width:430px;text-shadow:0 1px 16px rgba(0,0,0,.7)}
+.pct{font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.pct b{font-size:56px}.pct i{font-style:normal;font-size:24px;color:#cdb9fb;margin-left:3px}
+.psub{color:#a79fc7;font-size:13px;font-weight:600;margin-top:2px}
+/* 레이아웃: center = 화면 정중앙(오브 안 %), side = 왼쪽 텍스트, bottom = 하단 왼쪽 */
+.wrap{flex:1;display:flex;position:relative}
+.block{position:absolute;display:flex;flex-direction:column;gap:12px}
+body.center .center-pct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+body.center .copy{left:50%;bottom:11%;transform:translateX(-50%);align-items:center;text-align:center}
+body.side .copy{left:7%;top:50%;transform:translateY(-50%);max-width:46%}
+body.side .center-pct{display:none}
+body.side .copy .pct{margin-top:6px}
+body.bottom .copy{left:6.5%;bottom:9%;max-width:60%}
+body.bottom .center-pct{display:none}
+body.bottom .copy .pct{margin-top:8px}
+/* 센터형은 가운데 큰 % 하나만 — 카피 블록의 중복 %는 숨김 */
+body.center .copy .pct{display:none}
+/* 가독성 스크림: 밝은 3D 위에서도 글자가 읽히게(캔버스 위, UI 아래) */
+.scrim{position:fixed;inset:0;z-index:1;pointer-events:none}
+body.center .scrim{background:radial-gradient(42% 42% at 50% 50%,rgba(7,6,13,.72),rgba(7,6,13,.28) 55%,transparent 72%)}
+body.side .scrim{background:linear-gradient(90deg,rgba(7,6,13,.82) 0%,rgba(7,6,13,.5) 34%,transparent 60%)}
+body.bottom .scrim{background:linear-gradient(0deg,rgba(7,6,13,.9) 0%,rgba(7,6,13,.5) 24%,transparent 46%),linear-gradient(90deg,rgba(7,6,13,.7) 0%,transparent 48%)}
+.bar{height:4px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;width:min(360px,70vw)}
+.bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8f48f3,#b78bff);width:0;transition:width .4s}
+.foot{padding:20px 26px;color:#6f6a88;font-size:12px}
+.err{position:fixed;inset:auto 0 0 0;z-index:5;background:#2a1030;color:#ffd4d4;font-size:12px;padding:8px 14px;display:none}
+@media(prefers-reduced-motion:reduce){.badge .dot{animation:none}}
+</style></head>
+<body class="center">
+<canvas id="bg"></canvas>
+<div class="scrim"></div>
+<div class="ui">
+  <div class="top"><div class="logo">N</div><div class="brand">점핑클럽 <span>· 사이트 만들기</span></div></div>
+  <div class="wrap">
+    <div class="center-pct"><div class="pct"><b id="pc">0</b><i>%</i></div><div class="psub">디자인 생성 중</div></div>
+    <div class="block copy">
+      <span class="badge"><span class="dot"></span>8단계 · AI가 만드는 중</span>
+      <h1>디자인을 그리고 있어요</h1>
+      <p class="lede">첫 화면부터 보여드릴게요. 창을 닫아도 계속 만들어지고, 다 되면 이메일로 알려드립니다.</p>
+      <div class="pct" data-copy-pct><b id="pc2">0</b><i>%</i></div>
+      <div class="bar"><i id="barfill"></i></div>
+    </div>
+  </div>
+  <div class="foot">Nophelon — AI 웹사이트 빌더 · 로딩 화면 시안 A1</div>
+</div>
+<div class="err" id="err"></div>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// 진행률(데모) — 0→100 서서히. 오브 중앙 %와 카피 % 동기화.
+(function(){
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var pc=document.getElementById('pc'),pc2=document.getElementById('pc2'),bar=document.getElementById('barfill');
+  var p=0,target=92;
+  function tick(){ p+=Math.max(.15,(target-p)*0.012); if(p>target)p=target; var n=Math.round(p);
+    if(pc)pc.textContent=n; if(pc2)pc2.textContent=n; if(bar)bar.style.width=n+'%';
+    window.__p=p/100; if(!reduce) requestAnimationFrame(tick); }
+  if(reduce){ p=target; if(pc)pc.textContent=target; if(pc2)pc2.textContent=target; if(bar)bar.style.width=target+'%'; window.__p=.92; } else tick();
+})();
+// ── 3D 씬(페이블 작성) ──
+function initScene(canvas) {
+  var PALETTE = {
+    deep: new THREE.Color(0x5a28c2),
+    core: new THREE.Color(0x8f48f3),
+    light: new THREE.Color(0xb78bff),
+    highlight: new THREE.Color(0xd9c2ff)
+  };
+
+  var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var pixelRatio = Math.min(2, window.devicePixelRatio || 1);
+
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setPixelRatio(pixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  renderer.setClearColor(0x07060d, 1);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 0, 3.6);
+  camera.lookAt(0, 0, 0);
+
+  var spriteTex = makeSoftSprite();
+
+  // ---------- shared point shader (rim-weighted so the center stays hollow) ----------
+  var uniforms = {
+    uTime: { value: 0 },
+    uBoost: { value: 1 },
+    uScale: { value: (window.innerHeight * pixelRatio) / 250 },
+    uTex: { value: spriteTex }
+  };
+
+  var orbMaterial = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    vertexShader: [
+      'attribute float aPhase;',
+      'attribute float aSize;',
+      'attribute vec3 aColor;',
+      'uniform float uTime;',
+      'uniform float uScale;',
+      'varying vec3 vColor;',
+      'varying float vAlpha;',
+      'void main() {',
+      '  float breathe = 1.0 + 0.042 * sin(uTime * 1.3 + aPhase);',
+      '  vec3 pos = position * breathe;',
+      '  vec4 mv = modelViewMatrix * vec4(pos, 1.0);',
+      '  vec4 cen = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);',
+      '  vec3 dir = normalize(mv.xyz - cen.xyz);',
+      '  vec3 vd = normalize(-mv.xyz);',
+      '  float facing = dot(dir, vd);',
+      // rim: silhouette bright, screen-center (front/back caps) nearly transparent -> hollow middle
+      '  float rim = 1.0 - abs(facing);',
+      '  float a = 0.06 + 0.98 * pow(rim, 1.55);',
+      // near-side hemisphere reads brighter than the shell seen through the back
+      '  float side = mix(0.48, 1.0, smoothstep(-0.9, 0.9, facing));',
+      '  float twinkle = 0.78 + 0.22 * sin(uTime * 2.1 + aPhase * 1.37);',
+      '  vAlpha = a * side * twinkle;',
+      '  vColor = aColor;',
+      '  float ps = aSize * breathe * (uScale / max(0.0001, -mv.z));',
+      '  gl_PointSize = max(1.0, ps);',
+      '  gl_Position = projectionMatrix * mv;',
+      '}'
+    ].join('\n'),
+    fragmentShader: [
+      'uniform sampler2D uTex;',
+      'uniform float uBoost;',
+      'varying vec3 vColor;',
+      'varying float vAlpha;',
+      'void main() {',
+      '  vec4 tex = texture2D(uTex, gl_PointCoord);',
+      '  gl_FragColor = vec4(vColor * uBoost, 1.0) * tex * vAlpha;',
+      '}'
+    ].join('\n'),
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: THREE.AdditiveBlending
+  });
+
+  // ---------- particle orb: Fibonacci sphere shell ----------
+  var ORB_COUNT = 6000;
+  var RADIUS = 1.28;
+  var orbGeo = buildShellGeometry(ORB_COUNT, RADIUS, 0.022, false);
+  var orb = new THREE.Points(orbGeo, orbMaterial);
+
+  var orbGroup = new THREE.Group();
+  orbGroup.add(orb);
+  orbGroup.rotation.z = 0.1;
+  orbGroup.rotation.x = 0.14;
+  scene.add(orbGroup);
+
+  // ---------- equatorial energy band (shares the shader) ----------
+  var BAND_COUNT = 420;
+  var bandGeo = buildBandGeometry(BAND_COUNT, 1.52, 0.055);
+  var band = new THREE.Points(bandGeo, orbMaterial);
+  var bandGroup = new THREE.Group();
+  bandGroup.add(band);
+  bandGroup.rotation.z = -0.42;
+  bandGroup.rotation.x = 0.3;
+  scene.add(bandGroup);
+
+  // ---------- faint back nebula ----------
+  var nebulaGroup = new THREE.Group();
+  nebulaGroup.add(makeNebulaLayer(34, PALETTE.deep, 5.6, 0.05, spriteTex));
+  nebulaGroup.add(makeNebulaLayer(30, PALETTE.core, 4.2, 0.045, spriteTex));
+  nebulaGroup.add(makeNebulaLayer(22, PALETTE.light, 3.0, 0.035, spriteTex));
+  nebulaGroup.position.z = -10;
+  scene.add(nebulaGroup);
+
+  // ---------- helpers ----------
+  function makeSoftSprite() {
+    var c = document.createElement('canvas');
+    c.width = 64; c.height = 64;
+    var ctx = c.getContext('2d');
+    var g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0.0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.25, 'rgba(255,255,255,0.65)');
+    g.addColorStop(0.6, 'rgba(255,255,255,0.18)');
+    g.addColorStop(1.0, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    var tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function pickColor(t, rnd) {
+    var col = new THREE.Color();
+    if (rnd < 0.035) {
+      col.copy(PALETTE.highlight);
+    } else if (t < 0.5) {
+      col.copy(PALETTE.deep).lerp(PALETTE.core, t * 2.0);
+    } else {
+      col.copy(PALETTE.core).lerp(PALETTE.light, (t - 0.5) * 2.0);
+    }
+    // slight organic variation
+    var h = { h: 0, s: 0, l: 0 };
+    col.getHSL(h);
+    col.setHSL(h.h + (Math.random() - 0.5) * 0.015, h.s, Math.min(0.9, h.l + (Math.random() - 0.5) * 0.08));
+    return col;
+  }
+
+  function buildShellGeometry(count, radius, jitter) {
+    var pos = new Float32Array(count * 3);
+    var col = new Float32Array(count * 3);
+    var phase = new Float32Array(count);
+    var size = new Float32Array(count);
+    var GA = Math.PI * (3 - Math.sqrt(5)); // golden angle
+
+    for (var i = 0; i < count; i++) {
+      var y = 1 - ((i + 0.5) * 2) / count;
+      var r = Math.sqrt(Math.max(0, 1 - y * y));
+      var th = GA * i;
+      var jr = radius + (Math.random() - 0.5) * 2 * jitter;
+      pos[i * 3] = Math.cos(th) * r * jr;
+      pos[i * 3 + 1] = y * jr;
+      pos[i * 3 + 2] = Math.sin(th) * r * jr;
+
+      var rnd = Math.random();
+      var lat = (y + 1) * 0.5; // 0 bottom .. 1 top
+      var c = pickColor(lat * 0.85 + Math.random() * 0.15, rnd);
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+
+      phase[i] = Math.random() * Math.PI * 2;
+      size[i] = rnd < 0.035 ? 9 + Math.random() * 7 : 4.5 + Math.random() * 6.5;
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('aPhase', new THREE.BufferAttribute(phase, 1));
+    g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+    return g;
+  }
+
+  function buildBandGeometry(count, radius, thickness) {
+    var pos = new Float32Array(count * 3);
+    var col = new Float32Array(count * 3);
+    var phase = new Float32Array(count);
+    var size = new Float32Array(count);
+    for (var i = 0; i < count; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var rr = radius + (Math.random() - 0.5) * 0.12;
+      pos[i * 3] = Math.cos(a) * rr;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 2 * thickness;
+      pos[i * 3 + 2] = Math.sin(a) * rr;
+      var c = Math.random() < 0.3 ? PALETTE.highlight.clone() : PALETTE.light.clone();
+      c.lerp(PALETTE.core, Math.random() * 0.4);
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      phase[i] = Math.random() * Math.PI * 2;
+      size[i] = 3.5 + Math.random() * 4.5;
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('aPhase', new THREE.BufferAttribute(phase, 1));
+    g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+    return g;
+  }
+
+  function makeNebulaLayer(count, color, worldSize, opacity, tex) {
+    var pos = new Float32Array(count * 3);
+    for (var i = 0; i < count; i++) {
+      var ang = Math.random() * Math.PI * 2;
+      var rad = 1.5 + Math.pow(Math.random(), 0.7) * 6.5;
+      pos[i * 3] = Math.cos(ang) * rad;
+      pos[i * 3 + 1] = Math.sin(ang) * rad * 0.7;
+      pos[i * 3 + 2] = -(Math.random() * 6);
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    var m = new THREE.PointsMaterial({
+      size: worldSize,
+      sizeAttenuation: true,
+      map: tex,
+      color: color,
+      transparent: true,
+      opacity: opacity,
+      depthWrite: false,
+      depthTest: false,
+      blending: THREE.AdditiveBlending
+    });
+    return new THREE.Points(g, m);
+  }
+
+  function progress() {
+    var p = typeof window.__p === 'number' ? window.__p : 0;
+    return Math.max(0, Math.min(1, p));
+  }
+
+  // ---------- resize ----------
+  function onResize() {
+    var w = window.innerWidth, h = window.innerHeight;
+    pixelRatio = Math.min(2, window.devicePixelRatio || 1);
+    renderer.setPixelRatio(pixelRatio);
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    uniforms.uScale.value = (h * pixelRatio) / 250;
+    if (prefersReduced) renderOnce();
+  }
+  window.addEventListener('resize', onResize);
+
+  function renderOnce() {
+    renderer.render(scene, camera);
+  }
+
+  // ---------- reduced motion: a single composed frame, no loop ----------
+  if (prefersReduced) {
+    uniforms.uTime.value = 1.7;
+    uniforms.uBoost.value = 1 + progress() * 0.45;
+    orbGroup.rotation.y = 0.9;
+    bandGroup.rotation.y = 2.1;
+    renderOnce();
+    return;
+  }
+
+  // ---------- animation loop ----------
+  var clock = new THREE.Clock();
+  function tick() {
+    requestAnimationFrame(tick);
+    var dt = Math.min(clock.getDelta(), 0.05);
+    var t = clock.elapsedTime;
+    var p = progress();
+
+    uniforms.uTime.value = t;
+    uniforms.uBoost.value = 1 + p * 0.5;
+
+    var spin = 0.13 + p * 0.12;
+    orbGroup.rotation.y += spin * dt;
+    orbGroup.rotation.x = 0.14 + Math.sin(t * 0.17) * 0.06;
+
+    bandGroup.rotation.y -= (0.3 + p * 0.2) * dt;
+    bandGroup.rotation.z = -0.42 + Math.sin(t * 0.11) * 0.05;
+
+    nebulaGroup.rotation.z += 0.008 * dt;
+
+    // subtle camera drift for life, orb stays centered
+    camera.position.x = Math.sin(t * 0.12) * 0.07;
+    camera.position.y = Math.cos(t * 0.09) * 0.05;
+    camera.lookAt(0, 0, 0);
+
+    renderer.render(scene, camera);
+  }
+  tick();
+}
+try{ initScene(document.getElementById('bg')); }
+catch(e){ var el=document.getElementById('err'); el.style.display='block'; el.textContent='3D 씬 오류: '+(e&&e.message||e); console.error(e); }
+</script>
+</body></html>

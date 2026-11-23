@@ -1,0 +1,483 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>구조물 발현 · AI가 만드는 중 (B형)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#07060d;color:#f3f1fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard','Apple SD Gothic Neo',sans-serif;overflow:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+/* 씬이 자체 주입한 오버레이(일부 시안)는 숨기고, 공용 셸 오버레이(.ui/.err)만 보이게 — 카피 중복 방지 */
+body>div:not(.ui):not(.err):not(.scrim){display:none!important}
+.ui{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:22px 26px}
+.logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#8f48f3,#6f2ce0);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(143,72,243,.5)}
+.brand{font-weight:650;font-size:14.5px;letter-spacing:-.01em}
+.brand span{color:#a79fc7;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:999px;background:rgba(143,72,243,.16);color:#cdb9fb;border:1px solid rgba(143,72,243,.3);backdrop-filter:blur(6px)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:#b78bff;box-shadow:0 0 10px 2px rgba(167,114,245,.8);animation:bp 1.6s infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(26px,4.6vw,44px);font-weight:700;letter-spacing:-.025em;line-height:1.1;text-shadow:0 2px 30px rgba(0,0,0,.6)}
+.lede{color:#b9b3d2;font-size:clamp(13.5px,1.5vw,16px);line-height:1.6;max-width:430px;text-shadow:0 1px 16px rgba(0,0,0,.7)}
+.pct{font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.pct b{font-size:56px}.pct i{font-style:normal;font-size:24px;color:#cdb9fb;margin-left:3px}
+.psub{color:#a79fc7;font-size:13px;font-weight:600;margin-top:2px}
+/* 레이아웃: center = 화면 정중앙(오브 안 %), side = 왼쪽 텍스트, bottom = 하단 왼쪽 */
+.wrap{flex:1;display:flex;position:relative}
+.block{position:absolute;display:flex;flex-direction:column;gap:12px}
+body.center .center-pct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+body.center .copy{left:50%;bottom:11%;transform:translateX(-50%);align-items:center;text-align:center}
+body.side .copy{left:7%;top:50%;transform:translateY(-50%);max-width:46%}
+body.side .center-pct{display:none}
+body.side .copy .pct{margin-top:6px}
+body.bottom .copy{left:6.5%;bottom:9%;max-width:60%}
+body.bottom .center-pct{display:none}
+body.bottom .copy .pct{margin-top:8px}
+/* 센터형은 가운데 큰 % 하나만 — 카피 블록의 중복 %는 숨김 */
+body.center .copy .pct{display:none}
+/* 가독성 스크림: 밝은 3D 위에서도 글자가 읽히게(캔버스 위, UI 아래) */
+.scrim{position:fixed;inset:0;z-index:1;pointer-events:none}
+body.center .scrim{background:radial-gradient(42% 42% at 50% 50%,rgba(7,6,13,.72),rgba(7,6,13,.28) 55%,transparent 72%)}
+body.side .scrim{background:linear-gradient(90deg,rgba(7,6,13,.82) 0%,rgba(7,6,13,.5) 34%,transparent 60%)}
+body.bottom .scrim{background:linear-gradient(0deg,rgba(7,6,13,.9) 0%,rgba(7,6,13,.5) 24%,transparent 46%),linear-gradient(90deg,rgba(7,6,13,.7) 0%,transparent 48%)}
+.bar{height:4px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;width:min(360px,70vw)}
+.bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8f48f3,#b78bff);width:0;transition:width .4s}
+.foot{padding:20px 26px;color:#6f6a88;font-size:12px}
+.err{position:fixed;inset:auto 0 0 0;z-index:5;background:#2a1030;color:#ffd4d4;font-size:12px;padding:8px 14px;display:none}
+@media(prefers-reduced-motion:reduce){.badge .dot{animation:none}}
+</style></head>
+<body class="bottom">
+<canvas id="bg"></canvas>
+<div class="scrim"></div>
+<div class="ui">
+  <div class="top"><div class="logo">N</div><div class="brand">점핑클럽 <span>· 사이트 만들기</span></div></div>
+  <div class="wrap">
+    <div class="center-pct"><div class="pct"><b id="pc">0</b><i>%</i></div><div class="psub">디자인 생성 중</div></div>
+    <div class="block copy">
+      <span class="badge"><span class="dot"></span>8단계 · AI가 만드는 중</span>
+      <h1>디자인을 그리고 있어요</h1>
+      <p class="lede">첫 화면부터 보여드릴게요. 창을 닫아도 계속 만들어지고, 다 되면 이메일로 알려드립니다.</p>
+      <div class="pct" data-copy-pct><b id="pc2">0</b><i>%</i></div>
+      <div class="bar"><i id="barfill"></i></div>
+    </div>
+  </div>
+  <div class="foot">Nophelon — AI 웹사이트 빌더 · 로딩 화면 시안 B5</div>
+</div>
+<div class="err" id="err"></div>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// 진행률(데모) — 0→100 서서히. 오브 중앙 %와 카피 % 동기화.
+(function(){
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var pc=document.getElementById('pc'),pc2=document.getElementById('pc2'),bar=document.getElementById('barfill');
+  var p=0,target=92;
+  function tick(){ p+=Math.max(.15,(target-p)*0.012); if(p>target)p=target; var n=Math.round(p);
+    if(pc)pc.textContent=n; if(pc2)pc2.textContent=n; if(bar)bar.style.width=n+'%';
+    window.__p=p/100; if(!reduce) requestAnimationFrame(tick); }
+  if(reduce){ p=target; if(pc)pc.textContent=target; if(pc2)pc2.textContent=target; if(bar)bar.style.width=target+'%'; window.__p=.92; } else tick();
+})();
+// ── 3D 씬(페이블 작성) ──
+function initScene(canvas) {
+  var PURPLE_DEEP = { r: 0.56, g: 0.28, b: 0.95 };   // #8f48f3-ish
+  var PURPLE_LIT  = { r: 0.72, g: 0.55, b: 1.00 };   // #b78bff
+  var HEAD_WHITE  = { r: 1.00, g: 0.96, b: 1.00 };
+
+  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setClearColor(0x060509, 1);
+
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x060509, 16, 46);
+
+  var camera = new THREE.PerspectiveCamera(42, 1, 0.1, 140);
+  camera.position.set(0, 8.5, 24);
+  camera.lookAt(0, 4.6, 0);
+
+  var group = new THREE.Group();
+  scene.add(group);
+
+  // ------------------------------------------------------------------
+  // deterministic pseudo-random
+  // ------------------------------------------------------------------
+  var seed = 48271;
+  function rand() {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  }
+  function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
+  function smooth(v) { v = clamp01(v); return v * v * (3 - 2 * v); }
+
+  // ------------------------------------------------------------------
+  // procedural structure : lattice tower + pavilion cluster + ground grid
+  // every edge is split into sub-segments so lines "grow" as the
+  // reveal threshold sweeps past their keys.
+  // ------------------------------------------------------------------
+  var V = [];        // flat xyz pairs (2 verts per sub-segment)
+  var SK = [];       // reveal key per sub-segment
+  var ST = [];       // tone per sub-segment
+  var nodes = [];    // {x,y,z,key}
+  var nodeMap = {};
+
+  var MAX_H = 14, MAX_R = 11;
+
+  function keyOf(x, y, z) {
+    var r = Math.sqrt(x * x + z * z);
+    return Math.min(0.96, 0.05 + (y / MAX_H) * 0.52 + (r / MAX_R) * 0.28 + rand() * 0.06);
+  }
+
+  function addNode(x, y, z, key) {
+    var id = x.toFixed(2) + ',' + y.toFixed(2) + ',' + z.toFixed(2);
+    if (nodeMap[id] === undefined) {
+      nodeMap[id] = nodes.length;
+      nodes.push({ x: x, y: y, z: z, key: key });
+    } else if (key < nodes[nodeMap[id]].key) {
+      nodes[nodeMap[id]].key = key;
+    }
+  }
+
+  function pushSeg(ax, ay, az, bx, by, bz, key, tone) {
+    V.push(ax, ay, az, bx, by, bz);
+    SK.push(key);
+    ST.push(tone);
+  }
+
+  function edge(ax, ay, az, bx, by, bz, baseKey, sub, tone, noNode) {
+    sub = sub || 3;
+    tone = tone === undefined ? 1 : tone;
+    var key = baseKey === undefined ? keyOf((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2) : baseKey;
+    for (var j = 0; j < sub; j++) {
+      var t0 = j / sub, t1 = (j + 1) / sub;
+      pushSeg(
+        ax + (bx - ax) * t0, ay + (by - ay) * t0, az + (bz - az) * t0,
+        ax + (bx - ax) * t1, ay + (by - ay) * t1, az + (bz - az) * t1,
+        key + j * 0.007, tone
+      );
+    }
+    if (!noNode) {
+      addNode(ax, ay, az, key);
+      addNode(bx, by, bz, key + sub * 0.007);
+    }
+    return key;
+  }
+
+  function gridLine(ax, az, bx, bz, sub) {
+    for (var j = 0; j < sub; j++) {
+      var t0 = j / sub, t1 = (j + 1) / sub;
+      var mx = ax + (bx - ax) * (t0 + t1) / 2;
+      var mz = az + (bz - az) * (t0 + t1) / 2;
+      var r = Math.sqrt(mx * mx + mz * mz);
+      pushSeg(
+        ax + (bx - ax) * t0, 0, az + (bz - az) * t0,
+        ax + (bx - ax) * t1, 0, az + (bz - az) * t1,
+        0.012 + (r / MAX_R) * 0.085, 0.3
+      );
+    }
+  }
+
+  // --- ground blueprint grid -----------------------------------------
+  (function () {
+    var ext = 10, step = 2.5;
+    for (var g = -ext; g <= ext + 0.01; g += step) {
+      gridLine(-ext, g, ext, g, 4);
+      gridLine(g, -ext, g, ext, 4);
+    }
+  })();
+
+  // --- central lattice tower ------------------------------------------
+  (function () {
+    var levels = [0, 3.2, 6.0, 8.4, 10.4];
+    var widths = [3.0, 2.45, 1.95, 1.5, 1.1];
+    function corner(li, ci) {
+      var w = widths[li];
+      var sx = (ci === 0 || ci === 3) ? -1 : 1;
+      var sz = (ci < 2) ? -1 : 1;
+      return [w * sx, levels[li], w * sz];
+    }
+    var li, ci, a, b, c2;
+    for (li = 0; li < levels.length; li++) {
+      for (ci = 0; ci < 4; ci++) {           // rings
+        a = corner(li, ci); b = corner(li, (ci + 1) % 4);
+        edge(a[0], a[1], a[2], b[0], b[1], b[2]);
+      }
+    }
+    for (li = 0; li < levels.length - 1; li++) {
+      for (ci = 0; ci < 4; ci++) {           // tapering columns
+        a = corner(li, ci); b = corner(li + 1, ci);
+        edge(a[0], a[1], a[2], b[0], b[1], b[2]);
+      }
+      for (ci = 0; ci < 4; ci++) {           // alternating face bracing
+        a = corner(li, ci);
+        c2 = corner(li + 1, (ci + (li % 2 === 0 ? 1 : 3)) % 4);
+        edge(a[0], a[1], a[2], c2[0], c2[1], c2[2]);
+      }
+    }
+    var top = levels.length - 1;
+    for (ci = 0; ci < 4; ci++) {             // spire
+      a = corner(top, ci);
+      edge(a[0], a[1], a[2], 0, 12.6, 0, 0.90 + ci * 0.008);
+    }
+    edge(0, 12.6, 0, 0, 14.0, 0, 0.945, 2);  // antenna
+  })();
+
+  // --- pavilion cluster -------------------------------------------------
+  function building(cx, cz, hx, hz, h, floors) {
+    var xs = [cx - hx, cx + hx], zs = [cz - hz, cz + hz];
+    var corners = [[xs[0], zs[0]], [xs[1], zs[0]], [xs[1], zs[1]], [xs[0], zs[1]]];
+    var i, a, b, f;
+    var ys = [0, h];
+    for (f = 0; f < floors.length; f++) ys.splice(ys.length - 1, 0, floors[f]);
+    for (i = 0; i < 4; i++) {
+      a = corners[i];
+      edge(a[0], 0, a[1], a[0], h, a[1]);    // verticals
+    }
+    for (f = 0; f < ys.length; f++) {
+      for (i = 0; i < 4; i++) {              // rings per level
+        a = corners[i]; b = corners[(i + 1) % 4];
+        edge(a[0], ys[f], a[1], b[0], ys[f], b[1], undefined, 3, 1, f !== 0 && f !== ys.length - 1);
+      }
+    }
+  }
+  building( 6.2,  2.0, 1.2, 1.2, 4.6, [1.5, 3.0]);
+  building(-5.6, -3.4, 1.4, 1.1, 3.4, [1.7]);
+  building( 2.2, -6.2, 1.0, 1.0, 5.8, [2.0, 4.0]);
+  building(-3.4,  5.2, 0.9, 0.9, 2.6, []);
+
+  // ------------------------------------------------------------------
+  // GPU resources
+  // ------------------------------------------------------------------
+  var segCount = SK.length;
+  var lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(V), 3));
+  var lineColors = new Float32Array(segCount * 6);
+  var lineColorAttr = new THREE.Float32BufferAttribute(lineColors, 3);
+  lineColorAttr.setUsage(THREE.DynamicDrawUsage);
+  lineGeo.setAttribute('color', lineColorAttr);
+
+  var lineMat = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false
+  });
+  group.add(new THREE.LineSegments(lineGeo, lineMat));
+
+  var glowTex = makeGlowTexture();
+
+  var nodeGeo = new THREE.BufferGeometry();
+  var nodePos = new Float32Array(nodes.length * 3);
+  var nodeCol = new Float32Array(nodes.length * 3);
+  for (var ni = 0; ni < nodes.length; ni++) {
+    nodePos[ni * 3] = nodes[ni].x;
+    nodePos[ni * 3 + 1] = nodes[ni].y;
+    nodePos[ni * 3 + 2] = nodes[ni].z;
+  }
+  nodeGeo.setAttribute('position', new THREE.Float32BufferAttribute(nodePos, 3));
+  var nodeColorAttr = new THREE.Float32BufferAttribute(nodeCol, 3);
+  nodeColorAttr.setUsage(THREE.DynamicDrawUsage);
+  nodeGeo.setAttribute('color', nodeColorAttr);
+
+  var nodeMat = new THREE.PointsMaterial({
+    size: 0.55,
+    sizeAttenuation: true,
+    map: glowTex,
+    vertexColors: true,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false
+  });
+  group.add(new THREE.Points(nodeGeo, nodeMat));
+
+  // faint fill light — soft volumetric glows (procedural sprites)
+  var coreGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTex, color: 0x8f48f3, blending: THREE.AdditiveBlending,
+    transparent: true, opacity: 0.14, depthWrite: false, fog: false
+  }));
+  coreGlow.position.set(0, 5.2, 0);
+  coreGlow.scale.set(26, 26, 1);
+  scene.add(coreGlow);
+
+  var floorGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTex, color: 0x6a2fd0, blending: THREE.AdditiveBlending,
+    transparent: true, opacity: 0.10, depthWrite: false, fog: false
+  }));
+  floorGlow.position.set(0, 0.6, 0);
+  floorGlow.scale.set(30, 8, 1);
+  scene.add(floorGlow);
+
+  // ------------------------------------------------------------------
+  // overlay copy (bottom-left)
+  // ------------------------------------------------------------------
+  var host = canvas.parentElement || document.body;
+  if (host !== document.body) {
+    var hs = window.getComputedStyle(host);
+    if (hs.position === 'static') host.style.position = 'relative';
+  }
+  var overlay = document.createElement('div');
+  overlay.style.cssText =
+    'position:absolute;left:28px;bottom:26px;pointer-events:none;z-index:10;' +
+    'font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;' +
+    'color:rgba(233,224,255,0.92);user-select:none;';
+  overlay.innerHTML =
+    '<div style="font-size:10px;letter-spacing:0.34em;color:#b78bff;opacity:0.85;margin-bottom:9px;">' +
+      'STRUCTURE&nbsp;MATERIALIZING</div>' +
+    '<div style="font-size:16px;font-weight:600;letter-spacing:0.01em;">' +
+      'AI\uAC00 \uAD6C\uC870\uB97C \uC124\uACC4\uD558\uACE0 \uC788\uC2B5\uB2C8\uB2E4<span data-dots></span></div>' +
+    '<div style="margin-top:12px;width:168px;height:1px;background:rgba(183,139,255,0.18);">' +
+      '<div data-bar style="height:1px;width:0%;background:linear-gradient(90deg,#8f48f3,#b78bff);' +
+      'box-shadow:0 0 8px rgba(143,72,243,0.9);"></div></div>' +
+    '<div data-pct style="margin-top:7px;font-size:10px;letter-spacing:0.22em;color:rgba(183,139,255,0.7);">0%</div>';
+  host.appendChild(overlay);
+  var dotsEl = overlay.querySelector('[data-dots]');
+  var barEl = overlay.querySelector('[data-bar]');
+  var pctEl = overlay.querySelector('[data-pct]');
+
+  // ------------------------------------------------------------------
+  // animation
+  // ------------------------------------------------------------------
+  var T_BUILD = 6.5, T_HOLD = 3.2, T_FADE = 1.6, T_GAP = 0.4;
+  var CYCLE = T_BUILD + T_HOLD + T_FADE + T_GAP;
+
+  function paint(t, buildP, fade) {
+    var i, k, d, steady, head, br, tone;
+    for (i = 0; i < segCount; i++) {
+      k = SK[i];
+      d = buildP - k;
+      if (d <= 0 || fade <= 0) {
+        steady = 0; head = 0;
+      } else {
+        steady = Math.min(1, d * 16) * (0.52 + 0.10 * Math.sin(t * 1.7 + k * 37.0));
+        head = Math.exp(-d * d * 520) * 1.15;
+      }
+      tone = ST[i] * fade;
+      var mixv = Math.min(1, steady + head * 0.4);
+      var r = (PURPLE_DEEP.r + (PURPLE_LIT.r - PURPLE_DEEP.r) * mixv) * steady + HEAD_WHITE.r * head;
+      var g = (PURPLE_DEEP.g + (PURPLE_LIT.g - PURPLE_DEEP.g) * mixv) * steady + HEAD_WHITE.g * head;
+      var b = (PURPLE_DEEP.b + (PURPLE_LIT.b - PURPLE_DEEP.b) * mixv) * steady + HEAD_WHITE.b * head;
+      r *= tone; g *= tone; b *= tone;
+      var o = i * 6;
+      lineColors[o] = r;     lineColors[o + 1] = g;     lineColors[o + 2] = b;
+      lineColors[o + 3] = r; lineColors[o + 4] = g;     lineColors[o + 5] = b;
+    }
+    lineColorAttr.needsUpdate = true;
+
+    for (i = 0; i < nodes.length; i++) {
+      d = buildP - nodes[i].key;
+      if (d <= 0 || fade <= 0) {
+        br = 0; head = 0;
+      } else {
+        br = Math.min(1, d * 10) * (0.55 + 0.18 * Math.sin(t * 2.1 + nodes[i].key * 53.0));
+        head = Math.exp(-d * d * 300) * 1.4;
+      }
+      var nb = (br + head) * fade;
+      nodeCol[i * 3]     = Math.min(1.5, (0.80 * br + head)) * fade;
+      nodeCol[i * 3 + 1] = Math.min(1.5, (0.62 * br + head * 0.95)) * fade;
+      nodeCol[i * 3 + 2] = Math.min(1.5, (1.00 * br + head)) * fade;
+      if (nb < 0) { nodeCol[i * 3] = nodeCol[i * 3 + 1] = nodeCol[i * 3 + 2] = 0; }
+    }
+    nodeColorAttr.needsUpdate = true;
+
+    var pulse = 0.5 + 0.5 * Math.sin(t * 0.9);
+    coreGlow.material.opacity = (0.10 + 0.07 * buildP + 0.03 * pulse) * fade;
+    floorGlow.material.opacity = (0.06 + 0.06 * buildP) * fade;
+  }
+
+  function placeCamera(t) {
+    var ang = t * 0.075;
+    var rad = 24;
+    camera.position.set(
+      Math.sin(ang) * rad,
+      8.5 + Math.sin(t * 0.21) * 0.9,
+      Math.cos(ang) * rad
+    );
+    camera.lookAt(0, 4.6, 0);
+  }
+
+  function externalP() {
+    return (typeof window.__p === 'number' && isFinite(window.__p)) ? clamp01(window.__p) : 0;
+  }
+
+  function resize() {
+    var w = canvas.clientWidth || canvas.width || window.innerWidth;
+    var h = canvas.clientHeight || canvas.height || window.innerHeight;
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    if (reduced) renderStatic();
+  }
+
+  function renderStatic() {
+    placeCamera(14.8);
+    paint(14.8, 1, 1);
+    if (barEl) barEl.style.width = '100%';
+    if (pctEl) pctEl.textContent = '100%';
+    if (dotsEl) dotsEl.textContent = '';
+    renderer.render(scene, camera);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+
+  if (reduced) {
+    renderStatic();
+    return;
+  }
+
+  var clock = new THREE.Clock();
+  var lastUi = -1;
+
+  function frame() {
+    requestAnimationFrame(frame);
+    var t = clock.getElapsedTime();
+    var tc = t % CYCLE;
+
+    var auto;
+    if (tc < T_BUILD) auto = smooth(tc / T_BUILD);
+    else auto = 1;
+
+    var buildP = Math.min(1, auto + externalP() * 0.55);
+
+    var fade = 1;
+    if (tc > T_BUILD + T_HOLD) {
+      var fp = (tc - T_BUILD - T_HOLD) / T_FADE;
+      fade = fp >= 1 ? 0 : 1 - smooth(fp);
+    }
+    fade *= smooth(tc / 0.45);                 // soft re-entry after each cycle
+
+    placeCamera(t);
+    paint(t, buildP, fade);
+    renderer.render(scene, camera);
+
+    if (t - lastUi > 0.12) {
+      lastUi = t;
+      var pct = Math.round(buildP * 100);
+      if (barEl) barEl.style.width = pct + '%';
+      if (pctEl) pctEl.textContent = (fade <= 0.02 ? '\u2026' : pct + '%');
+      if (dotsEl) {
+        var n = Math.floor(t * 2.2) % 4;
+        dotsEl.textContent = '...'.slice(0, n);
+      }
+    }
+  }
+  frame();
+}
+
+function makeGlowTexture() {
+  var c = document.createElement('canvas');
+  c.width = c.height = 64;
+  var g = c.getContext('2d');
+  var grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0.0, 'rgba(255,255,255,1)');
+  grd.addColorStop(0.25, 'rgba(216,190,255,0.85)');
+  grd.addColorStop(0.6, 'rgba(143,72,243,0.22)');
+  grd.addColorStop(1.0, 'rgba(0,0,0,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 64, 64);
+  var tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+try{ initScene(document.getElementById('bg')); }
+catch(e){ var el=document.getElementById('err'); el.style.display='block'; el.textContent='3D 씬 오류: '+(e&&e.message||e); console.error(e); }
+</script>
+</body></html>

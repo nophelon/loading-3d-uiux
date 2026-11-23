@@ -1,0 +1,438 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>빛기둥과 파편 · AI가 만드는 중 (B형)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#07060d;color:#f3f1fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard','Apple SD Gothic Neo',sans-serif;overflow:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+/* 씬이 자체 주입한 오버레이(일부 시안)는 숨기고, 공용 셸 오버레이(.ui/.err)만 보이게 — 카피 중복 방지 */
+body>div:not(.ui):not(.err):not(.scrim){display:none!important}
+.ui{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:22px 26px}
+.logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#8f48f3,#6f2ce0);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(143,72,243,.5)}
+.brand{font-weight:650;font-size:14.5px;letter-spacing:-.01em}
+.brand span{color:#a79fc7;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:999px;background:rgba(143,72,243,.16);color:#cdb9fb;border:1px solid rgba(143,72,243,.3);backdrop-filter:blur(6px)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:#b78bff;box-shadow:0 0 10px 2px rgba(167,114,245,.8);animation:bp 1.6s infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(26px,4.6vw,44px);font-weight:700;letter-spacing:-.025em;line-height:1.1;text-shadow:0 2px 30px rgba(0,0,0,.6)}
+.lede{color:#b9b3d2;font-size:clamp(13.5px,1.5vw,16px);line-height:1.6;max-width:430px;text-shadow:0 1px 16px rgba(0,0,0,.7)}
+.pct{font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.pct b{font-size:56px}.pct i{font-style:normal;font-size:24px;color:#cdb9fb;margin-left:3px}
+.psub{color:#a79fc7;font-size:13px;font-weight:600;margin-top:2px}
+/* 레이아웃: center = 화면 정중앙(오브 안 %), side = 왼쪽 텍스트, bottom = 하단 왼쪽 */
+.wrap{flex:1;display:flex;position:relative}
+.block{position:absolute;display:flex;flex-direction:column;gap:12px}
+body.center .center-pct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+body.center .copy{left:50%;bottom:11%;transform:translateX(-50%);align-items:center;text-align:center}
+body.side .copy{left:7%;top:50%;transform:translateY(-50%);max-width:46%}
+body.side .center-pct{display:none}
+body.side .copy .pct{margin-top:6px}
+body.bottom .copy{left:6.5%;bottom:9%;max-width:60%}
+body.bottom .center-pct{display:none}
+body.bottom .copy .pct{margin-top:8px}
+/* 센터형은 가운데 큰 % 하나만 — 카피 블록의 중복 %는 숨김 */
+body.center .copy .pct{display:none}
+/* 가독성 스크림: 밝은 3D 위에서도 글자가 읽히게(캔버스 위, UI 아래) */
+.scrim{position:fixed;inset:0;z-index:1;pointer-events:none}
+body.center .scrim{background:radial-gradient(42% 42% at 50% 50%,rgba(7,6,13,.72),rgba(7,6,13,.28) 55%,transparent 72%)}
+body.side .scrim{background:linear-gradient(90deg,rgba(7,6,13,.82) 0%,rgba(7,6,13,.5) 34%,transparent 60%)}
+body.bottom .scrim{background:linear-gradient(0deg,rgba(7,6,13,.9) 0%,rgba(7,6,13,.5) 24%,transparent 46%),linear-gradient(90deg,rgba(7,6,13,.7) 0%,transparent 48%)}
+.bar{height:4px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;width:min(360px,70vw)}
+.bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8f48f3,#b78bff);width:0;transition:width .4s}
+.foot{padding:20px 26px;color:#6f6a88;font-size:12px}
+.err{position:fixed;inset:auto 0 0 0;z-index:5;background:#2a1030;color:#ffd4d4;font-size:12px;padding:8px 14px;display:none}
+@media(prefers-reduced-motion:reduce){.badge .dot{animation:none}}
+</style></head>
+<body class="bottom">
+<canvas id="bg"></canvas>
+<div class="scrim"></div>
+<div class="ui">
+  <div class="top"><div class="logo">N</div><div class="brand">점핑클럽 <span>· 사이트 만들기</span></div></div>
+  <div class="wrap">
+    <div class="center-pct"><div class="pct"><b id="pc">0</b><i>%</i></div><div class="psub">디자인 생성 중</div></div>
+    <div class="block copy">
+      <span class="badge"><span class="dot"></span>8단계 · AI가 만드는 중</span>
+      <h1>디자인을 그리고 있어요</h1>
+      <p class="lede">첫 화면부터 보여드릴게요. 창을 닫아도 계속 만들어지고, 다 되면 이메일로 알려드립니다.</p>
+      <div class="pct" data-copy-pct><b id="pc2">0</b><i>%</i></div>
+      <div class="bar"><i id="barfill"></i></div>
+    </div>
+  </div>
+  <div class="foot">Nophelon — AI 웹사이트 빌더 · 로딩 화면 시안 B1</div>
+</div>
+<div class="err" id="err"></div>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// 진행률(데모) — 0→100 서서히. 오브 중앙 %와 카피 % 동기화.
+(function(){
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var pc=document.getElementById('pc'),pc2=document.getElementById('pc2'),bar=document.getElementById('barfill');
+  var p=0,target=92;
+  function tick(){ p+=Math.max(.15,(target-p)*0.012); if(p>target)p=target; var n=Math.round(p);
+    if(pc)pc.textContent=n; if(pc2)pc2.textContent=n; if(bar)bar.style.width=n+'%';
+    window.__p=p/100; if(!reduce) requestAnimationFrame(tick); }
+  if(reduce){ p=target; if(pc)pc.textContent=target; if(pc2)pc2.textContent=target; if(bar)bar.style.width=target+'%'; window.__p=.92; } else tick();
+})();
+// ── 3D 씬(페이블 작성) ──
+function makeGlowTexture(size, stops) {
+  var c = document.createElement('canvas');
+  c.width = c.height = size;
+  var ctx = c.getContext('2d');
+  var g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  for (var i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  var tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function makeBeamMaterial(colorHex, strength) {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    fog: false,
+    uniforms: {
+      uColor: { value: new THREE.Color(colorHex) },
+      uTime: { value: 0 },
+      uStrength: { value: strength }
+    },
+    vertexShader: [
+      'varying vec3 vNormalW;',
+      'varying vec3 vPosW;',
+      'varying vec2 vUv;',
+      'void main(){',
+      '  vUv = uv;',
+      '  vec4 wp = modelMatrix * vec4(position, 1.0);',
+      '  vPosW = wp.xyz;',
+      '  vNormalW = normalize(mat3(modelMatrix) * normal);',
+      '  gl_Position = projectionMatrix * viewMatrix * wp;',
+      '}'
+    ].join('\n'),
+    fragmentShader: [
+      'uniform vec3 uColor;',
+      'uniform float uTime;',
+      'uniform float uStrength;',
+      'varying vec3 vNormalW;',
+      'varying vec3 vPosW;',
+      'varying vec2 vUv;',
+      'void main(){',
+      '  vec3 V = normalize(cameraPosition - vPosW);',
+      '  float facing = abs(dot(normalize(vNormalW), V));',
+      '  float core = pow(facing, 2.6);',
+      '  float topFade = smoothstep(1.0, 0.72, vUv.y);',
+      '  float baseBoost = 0.62 + 0.75 * pow(1.0 - vUv.y, 2.2);',
+      '  float flicker = 0.92 + 0.08 * sin(uTime * 2.3 + vUv.y * 7.0) * sin(uTime * 1.1);',
+      '  float a = core * topFade * baseBoost * flicker * uStrength;',
+      '  gl_FragColor = vec4(uColor, 1.0) * a;',
+      '}'
+    ].join('\n')
+  });
+}
+
+function initScene(canvas) {
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setClearColor(0x060509, 1);
+
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x060509, 0.042);
+
+  var camera = new THREE.PerspectiveCamera(42, 1, 0.1, 120);
+  camera.position.set(0, 3.2, 17);
+  camera.lookAt(0, 5.3, 0);
+
+  // ---------- Lights ----------
+  var hemi = new THREE.HemisphereLight(0x242a44, 0x05050a, 0.55);
+  scene.add(hemi);
+
+  var beamLight = new THREE.PointLight(0x8f48f3, 90, 34, 2);
+  beamLight.position.set(0, 3.0, 0);
+  scene.add(beamLight);
+
+  var coolRim = new THREE.DirectionalLight(0x35406b, 1.4);
+  coolRim.position.set(-6, 9, -8);
+  scene.add(coolRim);
+
+  var fillLight = new THREE.PointLight(0xb78bff, 18, 22, 2);
+  fillLight.position.set(0, 9.5, 0);
+  scene.add(fillLight);
+
+  // ---------- Light beam (nested additive cones) ----------
+  var beamGroup = new THREE.Group();
+  var beamH = 16;
+
+  var outerGeo = new THREE.CylinderGeometry(0.55, 2.6, beamH, 40, 1, true);
+  var outerMat = makeBeamMaterial(0x8f48f3, 0.34);
+  var outerBeam = new THREE.Mesh(outerGeo, outerMat);
+  outerBeam.position.y = beamH / 2;
+  beamGroup.add(outerBeam);
+
+  var midGeo = new THREE.CylinderGeometry(0.3, 1.35, beamH, 32, 1, true);
+  var midMat = makeBeamMaterial(0xb78bff, 0.5);
+  var midBeam = new THREE.Mesh(midGeo, midMat);
+  midBeam.position.y = beamH / 2;
+  beamGroup.add(midBeam);
+
+  var coreGeo = new THREE.CylinderGeometry(0.12, 0.5, beamH, 24, 1, true);
+  var coreMat = makeBeamMaterial(0xf0e6ff, 0.85);
+  var coreBeam = new THREE.Mesh(coreGeo, coreMat);
+  coreBeam.position.y = beamH / 2;
+  beamGroup.add(coreBeam);
+
+  scene.add(beamGroup);
+
+  // ---------- Glow sprites ----------
+  var hotTex = makeGlowTexture(256, [
+    [0.0, 'rgba(255,250,255,1)'],
+    [0.18, 'rgba(215,180,255,0.85)'],
+    [0.45, 'rgba(143,72,243,0.32)'],
+    [1.0, 'rgba(143,72,243,0)']
+  ]);
+  var softTex = makeGlowTexture(256, [
+    [0.0, 'rgba(183,139,255,0.55)'],
+    [0.4, 'rgba(143,72,243,0.2)'],
+    [1.0, 'rgba(20,10,40,0)']
+  ]);
+  var dotTex = makeGlowTexture(64, [
+    [0.0, 'rgba(255,255,255,1)'],
+    [0.35, 'rgba(210,185,255,0.6)'],
+    [1.0, 'rgba(160,110,255,0)']
+  ]);
+
+  function makeSprite(tex, scale, opacity) {
+    var m = new THREE.SpriteMaterial({
+      map: tex,
+      transparent: true,
+      opacity: opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    var s = new THREE.Sprite(m);
+    s.scale.set(scale, scale, 1);
+    return s;
+  }
+
+  var hotspot = makeSprite(hotTex, 5.6, 0.95);
+  hotspot.position.set(0, 0.35, 0);
+  scene.add(hotspot);
+
+  var hotspotCore = makeSprite(hotTex, 2.1, 1.0);
+  hotspotCore.position.set(0, 0.3, 0.05);
+  scene.add(hotspotCore);
+
+  var ambienceGlow = makeSprite(softTex, 16, 0.4);
+  ambienceGlow.position.set(0, 6.5, -2.5);
+  scene.add(ambienceGlow);
+
+  var sourceGlow = makeSprite(softTex, 7, 0.5);
+  sourceGlow.position.set(0, beamH - 0.5, -0.5);
+  scene.add(sourceGlow);
+
+  // Floor light pool
+  var poolMat = new THREE.MeshBasicMaterial({
+    map: softTex,
+    transparent: true,
+    opacity: 0.55,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    fog: false
+  });
+  var pool = new THREE.Mesh(new THREE.PlaneGeometry(13, 13), poolMat);
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.y = 0.02;
+  scene.add(pool);
+
+  // ---------- Debris shards ----------
+  var shardMats = [
+    new THREE.MeshStandardMaterial({ color: 0x14121d, roughness: 0.5, metalness: 0.4, flatShading: true, emissive: 0x160b2c, emissiveIntensity: 0.6 }),
+    new THREE.MeshStandardMaterial({ color: 0x1a1726, roughness: 0.65, metalness: 0.25, flatShading: true, emissive: 0x0e0a1e, emissiveIntensity: 0.7 }),
+    new THREE.MeshStandardMaterial({ color: 0x100e18, roughness: 0.42, metalness: 0.5, flatShading: true, emissive: 0x1b0f33, emissiveIntensity: 0.5 })
+  ];
+  var shardGeos = [
+    new THREE.IcosahedronGeometry(1, 0),
+    new THREE.TetrahedronGeometry(1, 0),
+    new THREE.OctahedronGeometry(1, 0)
+  ];
+
+  var shards = [];
+  var SHARD_COUNT = 38;
+  for (var i = 0; i < SHARD_COUNT; i++) {
+    var mesh = new THREE.Mesh(shardGeos[i % 3], shardMats[i % 3]);
+    var ang = Math.random() * Math.PI * 2;
+    var rad = 2.4 + Math.random() * 6.0;
+    var h = 0.6 + Math.random() * 8.8;
+    var size = 0.16 + Math.pow(Math.random(), 1.6) * 0.75;
+    mesh.scale.set(
+      size * (0.6 + Math.random() * 0.9),
+      size * (0.6 + Math.random() * 0.9),
+      size * (0.6 + Math.random() * 0.9)
+    );
+    mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    scene.add(mesh);
+    shards.push({
+      mesh: mesh,
+      ang: ang,
+      rad: rad,
+      baseY: h,
+      orbitSpeed: (0.02 + Math.random() * 0.05) * (Math.random() < 0.5 ? 1 : -1),
+      bobAmp: 0.15 + Math.random() * 0.45,
+      bobSpeed: 0.25 + Math.random() * 0.5,
+      bobPhase: Math.random() * Math.PI * 2,
+      rx: (Math.random() - 0.5) * 0.4,
+      ry: (Math.random() - 0.5) * 0.4,
+      rz: (Math.random() - 0.5) * 0.3
+    });
+  }
+
+  // ---------- Ground haze / dust ----------
+  var DUST_COUNT = 2200;
+  var dustPos = new Float32Array(DUST_COUNT * 3);
+  for (var d = 0; d < DUST_COUNT; d++) {
+    var da = Math.random() * Math.PI * 2;
+    var dr = Math.pow(Math.random(), 0.5) * 17;
+    dustPos[d * 3] = Math.cos(da) * dr;
+    dustPos[d * 3 + 1] = Math.pow(Math.random(), 2.2) * 3.2 + 0.03;
+    dustPos[d * 3 + 2] = Math.sin(da) * dr;
+  }
+  var dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+  var dustMat = new THREE.PointsMaterial({
+    map: dotTex,
+    color: 0x6b5a9e,
+    size: 0.3,
+    transparent: true,
+    opacity: 0.32,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  var dust = new THREE.Points(dustGeo, dustMat);
+  scene.add(dust);
+
+  // ---------- Motes descending inside the beam ----------
+  var MOTE_COUNT = 280;
+  var motePos = new Float32Array(MOTE_COUNT * 3);
+  var moteSpeed = new Float32Array(MOTE_COUNT);
+  for (var m = 0; m < MOTE_COUNT; m++) {
+    var my = Math.random() * beamH;
+    var frac = 1 - my / beamH;
+    var mr = Math.random() * (0.35 + frac * 1.4);
+    var ma = Math.random() * Math.PI * 2;
+    motePos[m * 3] = Math.cos(ma) * mr;
+    motePos[m * 3 + 1] = my;
+    motePos[m * 3 + 2] = Math.sin(ma) * mr;
+    moteSpeed[m] = 0.5 + Math.random() * 1.6;
+  }
+  var moteGeo = new THREE.BufferGeometry();
+  moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
+  var moteMat = new THREE.PointsMaterial({
+    map: dotTex,
+    color: 0xd9c6ff,
+    size: 0.17,
+    transparent: true,
+    opacity: 0.85,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  var motes = new THREE.Points(moteGeo, moteMat);
+  scene.add(motes);
+
+  // ---------- Resize ----------
+  function onResize() {
+    var w = canvas.clientWidth || window.innerWidth;
+    var h2 = canvas.clientHeight || window.innerHeight;
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setSize(w, h2, false);
+    camera.aspect = w / h2;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', onResize);
+  onResize();
+
+  // ---------- Animation ----------
+  var clock = new THREE.Clock();
+
+  function update(t, dt) {
+    var p = typeof window.__p === 'number' ? Math.max(0, Math.min(1, window.__p)) : 0;
+    var energy = 0.72 + 0.55 * p;
+
+    outerMat.uniforms.uTime.value = t;
+    midMat.uniforms.uTime.value = t;
+    coreMat.uniforms.uTime.value = t;
+    outerMat.uniforms.uStrength.value = 0.34 * energy;
+    midMat.uniforms.uStrength.value = 0.5 * energy;
+    coreMat.uniforms.uStrength.value = 0.85 * energy;
+
+    var pulse = 1 + 0.055 * Math.sin(t * 2.1) + 0.025 * Math.sin(t * 5.3);
+    hotspot.scale.set(5.6 * pulse * energy, 5.6 * pulse * energy, 1);
+    hotspotCore.scale.set(2.1 * pulse, 2.1 * pulse, 1);
+    hotspot.material.opacity = 0.75 * energy + 0.12 * Math.sin(t * 3.1);
+    beamLight.intensity = 90 * energy * (0.94 + 0.06 * Math.sin(t * 2.7));
+    poolMat.opacity = 0.45 * energy + 0.08 * Math.sin(t * 2.1);
+    sourceGlow.material.opacity = 0.45 * energy;
+
+    beamGroup.rotation.y = t * 0.05;
+
+    for (var i = 0; i < shards.length; i++) {
+      var s = shards[i];
+      var a = s.ang + t * s.orbitSpeed;
+      s.mesh.position.set(
+        Math.cos(a) * s.rad,
+        s.baseY + Math.sin(t * s.bobSpeed + s.bobPhase) * s.bobAmp,
+        Math.sin(a) * s.rad
+      );
+      s.mesh.rotation.x += s.rx * dt;
+      s.mesh.rotation.y += s.ry * dt;
+      s.mesh.rotation.z += s.rz * dt;
+    }
+
+    dust.rotation.y = t * 0.012;
+
+    var arr = moteGeo.attributes.position.array;
+    for (var m2 = 0; m2 < MOTE_COUNT; m2++) {
+      var yi = m2 * 3 + 1;
+      arr[yi] -= moteSpeed[m2] * dt * energy;
+      if (arr[yi] < 0.05) {
+        arr[yi] = beamH - Math.random() * 1.5;
+        var fr = 1 - arr[yi] / beamH;
+        var rr = Math.random() * (0.35 + fr * 1.4);
+        var aa = Math.random() * Math.PI * 2;
+        arr[m2 * 3] = Math.cos(aa) * rr;
+        arr[m2 * 3 + 2] = Math.sin(aa) * rr;
+      }
+    }
+    moteGeo.attributes.position.needsUpdate = true;
+
+    camera.position.x = Math.sin(t * 0.21) * 0.75;
+    camera.position.y = 3.2 + Math.sin(t * 0.3) * 0.35;
+    camera.position.z = 17 + Math.sin(t * 0.16) * 0.55;
+    camera.lookAt(0, 5.3, 0);
+  }
+
+  var reduced = false;
+  try {
+    reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {}
+
+  if (reduced) {
+    update(1.2, 0.016);
+    renderer.render(scene, camera);
+    return;
+  }
+
+  function loop() {
+    requestAnimationFrame(loop);
+    var dt = Math.min(clock.getDelta(), 0.05);
+    var t = clock.elapsedTime;
+    update(t, dt);
+    renderer.render(scene, camera);
+  }
+  loop();
+}
+try{ initScene(document.getElementById('bg')); }
+catch(e){ var el=document.getElementById('err'); el.style.display='block'; el.textContent='3D 씬 오류: '+(e&&e.message||e); console.error(e); }
+</script>
+</body></html>

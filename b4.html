@@ -1,0 +1,384 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>포탈 분출 · AI가 만드는 중 (B형)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#07060d;color:#f3f1fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard','Apple SD Gothic Neo',sans-serif;overflow:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+/* 씬이 자체 주입한 오버레이(일부 시안)는 숨기고, 공용 셸 오버레이(.ui/.err)만 보이게 — 카피 중복 방지 */
+body>div:not(.ui):not(.err):not(.scrim){display:none!important}
+.ui{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:22px 26px}
+.logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#8f48f3,#6f2ce0);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(143,72,243,.5)}
+.brand{font-weight:650;font-size:14.5px;letter-spacing:-.01em}
+.brand span{color:#a79fc7;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:999px;background:rgba(143,72,243,.16);color:#cdb9fb;border:1px solid rgba(143,72,243,.3);backdrop-filter:blur(6px)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:#b78bff;box-shadow:0 0 10px 2px rgba(167,114,245,.8);animation:bp 1.6s infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(26px,4.6vw,44px);font-weight:700;letter-spacing:-.025em;line-height:1.1;text-shadow:0 2px 30px rgba(0,0,0,.6)}
+.lede{color:#b9b3d2;font-size:clamp(13.5px,1.5vw,16px);line-height:1.6;max-width:430px;text-shadow:0 1px 16px rgba(0,0,0,.7)}
+.pct{font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.pct b{font-size:56px}.pct i{font-style:normal;font-size:24px;color:#cdb9fb;margin-left:3px}
+.psub{color:#a79fc7;font-size:13px;font-weight:600;margin-top:2px}
+/* 레이아웃: center = 화면 정중앙(오브 안 %), side = 왼쪽 텍스트, bottom = 하단 왼쪽 */
+.wrap{flex:1;display:flex;position:relative}
+.block{position:absolute;display:flex;flex-direction:column;gap:12px}
+body.center .center-pct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+body.center .copy{left:50%;bottom:11%;transform:translateX(-50%);align-items:center;text-align:center}
+body.side .copy{left:7%;top:50%;transform:translateY(-50%);max-width:46%}
+body.side .center-pct{display:none}
+body.side .copy .pct{margin-top:6px}
+body.bottom .copy{left:6.5%;bottom:9%;max-width:60%}
+body.bottom .center-pct{display:none}
+body.bottom .copy .pct{margin-top:8px}
+/* 센터형은 가운데 큰 % 하나만 — 카피 블록의 중복 %는 숨김 */
+body.center .copy .pct{display:none}
+/* 가독성 스크림: 밝은 3D 위에서도 글자가 읽히게(캔버스 위, UI 아래) */
+.scrim{position:fixed;inset:0;z-index:1;pointer-events:none}
+body.center .scrim{background:radial-gradient(42% 42% at 50% 50%,rgba(7,6,13,.72),rgba(7,6,13,.28) 55%,transparent 72%)}
+body.side .scrim{background:linear-gradient(90deg,rgba(7,6,13,.82) 0%,rgba(7,6,13,.5) 34%,transparent 60%)}
+body.bottom .scrim{background:linear-gradient(0deg,rgba(7,6,13,.9) 0%,rgba(7,6,13,.5) 24%,transparent 46%),linear-gradient(90deg,rgba(7,6,13,.7) 0%,transparent 48%)}
+.bar{height:4px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;width:min(360px,70vw)}
+.bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8f48f3,#b78bff);width:0;transition:width .4s}
+.foot{padding:20px 26px;color:#6f6a88;font-size:12px}
+.err{position:fixed;inset:auto 0 0 0;z-index:5;background:#2a1030;color:#ffd4d4;font-size:12px;padding:8px 14px;display:none}
+@media(prefers-reduced-motion:reduce){.badge .dot{animation:none}}
+</style></head>
+<body class="bottom">
+<canvas id="bg"></canvas>
+<div class="scrim"></div>
+<div class="ui">
+  <div class="top"><div class="logo">N</div><div class="brand">점핑클럽 <span>· 사이트 만들기</span></div></div>
+  <div class="wrap">
+    <div class="center-pct"><div class="pct"><b id="pc">0</b><i>%</i></div><div class="psub">디자인 생성 중</div></div>
+    <div class="block copy">
+      <span class="badge"><span class="dot"></span>8단계 · AI가 만드는 중</span>
+      <h1>디자인을 그리고 있어요</h1>
+      <p class="lede">첫 화면부터 보여드릴게요. 창을 닫아도 계속 만들어지고, 다 되면 이메일로 알려드립니다.</p>
+      <div class="pct" data-copy-pct><b id="pc2">0</b><i>%</i></div>
+      <div class="bar"><i id="barfill"></i></div>
+    </div>
+  </div>
+  <div class="foot">Nophelon — AI 웹사이트 빌더 · 로딩 화면 시안 B4</div>
+</div>
+<div class="err" id="err"></div>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// 진행률(데모) — 0→100 서서히. 오브 중앙 %와 카피 % 동기화.
+(function(){
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var pc=document.getElementById('pc'),pc2=document.getElementById('pc2'),bar=document.getElementById('barfill');
+  var p=0,target=92;
+  function tick(){ p+=Math.max(.15,(target-p)*0.012); if(p>target)p=target; var n=Math.round(p);
+    if(pc)pc.textContent=n; if(pc2)pc2.textContent=n; if(bar)bar.style.width=n+'%';
+    window.__p=p/100; if(!reduce) requestAnimationFrame(tick); }
+  if(reduce){ p=target; if(pc)pc.textContent=target; if(pc2)pc2.textContent=target; if(bar)bar.style.width=target+'%'; window.__p=.92; } else tick();
+})();
+// ── 3D 씬(페이블 작성) ──
+function initScene(canvas) {
+  var BG = 0x060509;
+  var PURPLE = new THREE.Color(0xb78bff);
+  var DEEP = new THREE.Color(0x8f48f3);
+  var CYAN = new THREE.Color(0x4ea8ff);
+  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setClearColor(BG, 1);
+
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(BG, 0.05);
+
+  var camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80);
+  camera.position.set(0, 1.0, 5.8);
+
+  function fit() {
+    var w = canvas.clientWidth || window.innerWidth;
+    var h = canvas.clientHeight || window.innerHeight;
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  fit();
+  window.addEventListener('resize', fit);
+
+  /* ---------- procedural textures ---------- */
+  function makeTex(size, paint) {
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    paint(c.getContext('2d'), size);
+    var t = new THREE.CanvasTexture(c);
+    if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+  var dotTex = makeTex(64, function (g, s) {
+    var gr = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    gr.addColorStop(0, 'rgba(255,255,255,1)');
+    gr.addColorStop(0.3, 'rgba(255,255,255,0.85)');
+    gr.addColorStop(0.6, 'rgba(200,160,255,0.3)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  });
+  var glowTex = makeTex(128, function (g, s) {
+    var gr = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    gr.addColorStop(0, 'rgba(255,255,255,0.95)');
+    gr.addColorStop(0.3, 'rgba(183,139,255,0.4)');
+    gr.addColorStop(0.7, 'rgba(110,60,210,0.12)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  });
+  var ringTex = makeTex(256, function (g, s) {
+    var gr = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    gr.addColorStop(0.40, 'rgba(0,0,0,0)');
+    gr.addColorStop(0.55, 'rgba(100,60,200,0.16)');
+    gr.addColorStop(0.60, 'rgba(199,160,255,0.85)');
+    gr.addColorStop(0.66, 'rgba(120,72,230,0.28)');
+    gr.addColorStop(0.85, 'rgba(60,30,120,0.06)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  });
+
+  /* ---------- portal ---------- */
+  var portal = new THREE.Group();
+  portal.rotation.set(-0.52, 0.40, 0.06);
+  scene.add(portal);
+
+  var R = 1.5;
+  var torusMat = new THREE.MeshStandardMaterial({
+    color: 0x241038, emissive: DEEP, emissiveIntensity: 2.0,
+    roughness: 0.3, metalness: 0.7
+  });
+  var torus = new THREE.Mesh(new THREE.TorusGeometry(R, 0.05, 10, 56), torusMat);
+  portal.add(torus);
+
+  var gyroMat = new THREE.MeshStandardMaterial({
+    color: 0x081020, emissive: CYAN, emissiveIntensity: 1.6,
+    roughness: 0.4, metalness: 0.5, transparent: true, opacity: 0.85
+  });
+  var gyro = new THREE.Mesh(new THREE.TorusGeometry(R * 0.78, 0.013, 8, 48), gyroMat);
+  portal.add(gyro);
+
+  var ringGlow = new THREE.Mesh(
+    new THREE.PlaneGeometry(R * 3.4, R * 3.4),
+    new THREE.MeshBasicMaterial({
+      map: ringTex, transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false, side: THREE.DoubleSide, opacity: 0.6
+    })
+  );
+  portal.add(ringGlow);
+
+  var core = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTex, color: 0x9fc8ff, blending: THREE.AdditiveBlending,
+    depthWrite: false, transparent: true, opacity: 0.75
+  }));
+  core.scale.set(1.4, 1.4, 1);
+  portal.add(core);
+
+  var halo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTex, color: 0x8f48f3, blending: THREE.AdditiveBlending,
+    depthWrite: false, transparent: true, opacity: 0.22
+  }));
+  halo.scale.set(7.5, 7.5, 1);
+  portal.add(halo);
+
+  scene.add(new THREE.AmbientLight(0x221133, 1.4));
+  var pl = new THREE.PointLight(0x8f48f3, 12, 20, 2);
+  portal.add(pl);
+
+  /* ---------- burst particles (streams through the gate) ---------- */
+  var COUNT = 4200, STREAMS = 6;
+  var pos = new Float32Array(COUNT * 3);
+  var col = new Float32Array(COUNT * 3);
+  var vel = new Float32Array(COUNT * 3);
+  var age = new Float32Array(COUNT);
+  var life = new Float32Array(COUNT);
+  var swirl = new Float32Array(COUNT);
+  var dead = new Uint8Array(COUNT);
+
+  function spawn(i) {
+    var a = (i % STREAMS) / STREAMS * Math.PI * 2 + (Math.random() - 0.5) * 0.32;
+    var side = (i & 1) ? 1 : -1;
+    var r0 = Math.random() * 0.15;
+    var i3 = i * 3;
+    pos[i3] = Math.cos(a) * r0;
+    pos[i3 + 1] = Math.sin(a) * r0;
+    pos[i3 + 2] = side * Math.random() * 0.06;
+    var sp = 1.15 + Math.random() * 0.95;
+    vel[i3] = Math.cos(a) * (0.05 + Math.random() * 0.1);
+    vel[i3 + 1] = Math.sin(a) * (0.05 + Math.random() * 0.1);
+    vel[i3 + 2] = side * sp;
+    swirl[i] = side * (0.65 + Math.random() * 0.5);
+    life[i] = 2.2 + Math.random() * 1.6;
+    age[i] = 0;
+    dead[i] = 0;
+  }
+  for (var i = 0; i < COUNT; i++) { spawn(i); dead[i] = 1; }
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  var points = new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.062, map: dotTex, vertexColors: true, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
+  }));
+  points.frustumCulled = false;
+  portal.add(points);
+
+  function stepBurst(dt, p) {
+    var emis = (2.5 + 7.0 * p) * dt;
+    var bright = 0.6 + 0.9 * p;
+    for (var i = 0; i < COUNT; i++) {
+      var i3 = i * 3;
+      if (dead[i]) {
+        if (Math.random() < emis) spawn(i);
+        else { col[i3] = col[i3 + 1] = col[i3 + 2] = 0; continue; }
+      }
+      age[i] += dt;
+      if (age[i] >= life[i]) {
+        dead[i] = 1;
+        col[i3] = col[i3 + 1] = col[i3 + 2] = 0;
+        continue;
+      }
+      var t = age[i] / life[i];
+      var x = pos[i3], y = pos[i3 + 1];
+      var rl = Math.sqrt(x * x + y * y) + 1e-5;
+      var rx = x / rl, ry = y / rl;
+      var flare = 0.35 + 1.6 * t;              // curve away from the axis
+      vel[i3] += (rx * flare - ry * swirl[i] * 0.5) * dt;
+      vel[i3 + 1] += (ry * flare + rx * swirl[i] * 0.5) * dt;
+      vel[i3 + 2] *= (1 - 0.55 * dt);          // axial decay -> graceful arc
+      vel[i3] *= (1 - 0.12 * dt);
+      vel[i3 + 1] *= (1 - 0.12 * dt);
+      pos[i3] += vel[i3] * dt;
+      pos[i3 + 1] += vel[i3 + 1] * dt;
+      pos[i3 + 2] += vel[i3 + 2] * dt;
+      var env = Math.min(1, t * 6) * Math.pow(1 - t, 1.6) * bright;
+      var heat = Math.max(0, 1 - t * 3.2) * 0.7;
+      col[i3] = (PURPLE.r + (CYAN.r - PURPLE.r) * t + heat) * env;
+      col[i3 + 1] = (PURPLE.g + (CYAN.g - PURPLE.g) * t + heat) * env;
+      col[i3 + 2] = (PURPLE.b + (CYAN.b - PURPLE.b) * t + heat) * env;
+    }
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.color.needsUpdate = true;
+  }
+
+  /* ---------- faint orbiting motes ---------- */
+  var MC = 140;
+  var mPos = new Float32Array(MC * 3);
+  var mCol = new Float32Array(MC * 3);
+  var mAng = new Float32Array(MC);
+  var mRad = new Float32Array(MC);
+  var mSpd = new Float32Array(MC);
+  var mTil = new Float32Array(MC);
+  var mPh = new Float32Array(MC);
+  for (var m = 0; m < MC; m++) {
+    mAng[m] = Math.random() * Math.PI * 2;
+    mRad[m] = 2.1 + Math.random() * 1.6;
+    mSpd[m] = (0.05 + Math.random() * 0.14) * (Math.random() < 0.5 ? 1 : -1);
+    mTil[m] = (Math.random() - 0.5) * 1.1;
+    mPh[m] = Math.random() * Math.PI * 2;
+    var cc = Math.random() < 0.72 ? PURPLE : CYAN;
+    var f = 0.18 + Math.random() * 0.3;
+    mCol[m * 3] = cc.r * f; mCol[m * 3 + 1] = cc.g * f; mCol[m * 3 + 2] = cc.b * f;
+  }
+  var mGeo = new THREE.BufferGeometry();
+  mGeo.setAttribute('position', new THREE.BufferAttribute(mPos, 3));
+  mGeo.setAttribute('color', new THREE.BufferAttribute(mCol, 3));
+  var motes = new THREE.Points(mGeo, new THREE.PointsMaterial({
+    size: 0.05, map: dotTex, vertexColors: true, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
+  }));
+  motes.frustumCulled = false;
+  scene.add(motes);
+
+  function stepMotes(dt, time) {
+    for (var m = 0; m < MC; m++) {
+      mAng[m] += mSpd[m] * dt;
+      var a = mAng[m], r = mRad[m];
+      mPos[m * 3] = Math.cos(a) * r;
+      mPos[m * 3 + 1] = Math.sin(a) * r * mTil[m] * 0.4 + Math.sin(time * 0.3 + mPh[m]) * 0.25;
+      mPos[m * 3 + 2] = Math.sin(a) * r * 0.75;
+    }
+    mGeo.attributes.position.needsUpdate = true;
+  }
+
+  /* ---------- overlay copy (bottom-left) ---------- */
+  var host = canvas.parentElement || document.body;
+  try {
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+  } catch (e) {}
+  var label = document.createElement('div');
+  label.style.cssText = 'position:absolute;left:28px;bottom:26px;pointer-events:none;z-index:10;' +
+    "font-family:'Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;color:#eae4f7;";
+  var dotsHtml = reduced ? '…' :
+    '<span style="animation:nphD 1.4s infinite">.</span>' +
+    '<span style="animation:nphD 1.4s .25s infinite">.</span>' +
+    '<span style="animation:nphD 1.4s .5s infinite">.</span>';
+  label.innerHTML =
+    '<div style="font-size:11px;letter-spacing:.34em;color:#8f78c8;margin-bottom:9px;">GENERATING</div>' +
+    '<div style="font-size:19px;font-weight:600;letter-spacing:-.01em;text-shadow:0 2px 18px rgba(143,72,243,.45);">' +
+    'AI가 당신의 사이트를 만들고 있어요' + dotsHtml + '</div>' +
+    '<div style="font-size:12.5px;color:rgba(217,206,243,.55);margin-top:7px;">잠시만 기다려 주세요 — 디자인이 포탈을 통해 도착하는 중입니다</div>';
+  if (!reduced) {
+    var st = document.createElement('style');
+    st.textContent = '@keyframes nphD{0%,20%{opacity:0}50%{opacity:1}100%{opacity:0}}';
+    label.appendChild(st);
+  }
+  host.appendChild(label);
+
+  /* ---------- animation ---------- */
+  var clock = new THREE.Clock();
+  var time = 0;
+
+  function readP() {
+    var v = (typeof window.__p === 'number') ? window.__p : 0.35;
+    return Math.max(0, Math.min(1, v));
+  }
+
+  function step(dt) {
+    time += dt;
+    var p = readP();
+
+    gyro.rotation.x = time * 0.5;
+    gyro.rotation.y = Math.sin(time * 0.23) * 0.3;
+    portal.rotation.x = -0.52 + Math.sin(time * 0.09) * 0.04;
+    portal.rotation.z = 0.06 + Math.sin(time * 0.11) * 0.05;
+
+    var pulse = Math.sin(time * 2.1);
+    torusMat.emissiveIntensity = 1.6 + 1.5 * p + 0.25 * pulse;
+    gyroMat.emissiveIntensity = 1.2 + 1.0 * p + 0.2 * Math.sin(time * 2.7 + 1.3);
+    ringGlow.material.opacity = 0.5 + 0.3 * p + 0.07 * Math.sin(time * 1.7);
+    var cs = 1.3 + 0.12 * pulse + 0.5 * p;
+    core.scale.set(cs, cs, 1);
+    core.material.opacity = 0.55 + 0.2 * pulse * 0.5 + 0.25 * p;
+    halo.material.opacity = 0.16 + 0.14 * p;
+    pl.intensity = 10 + 10 * p + 2 * pulse;
+
+    var ca = time * 0.08;
+    camera.position.set(Math.sin(ca) * 5.8, 1.0 + Math.sin(time * 0.05) * 0.35, Math.cos(ca) * 5.8);
+    camera.lookAt(0, 0, 0);
+
+    stepBurst(dt, p);
+    stepMotes(dt, time);
+  }
+
+  // prewarm to steady state so the first visible frame is already alive
+  for (var w = 0; w < 110; w++) step(1 / 30);
+
+  if (reduced) {
+    renderer.render(scene, camera);          // ONE frame only
+    return;
+  }
+
+  (function loop() {
+    requestAnimationFrame(loop);
+    var dt = Math.min(0.05, clock.getDelta());
+    step(dt);
+    renderer.render(scene, camera);
+  })();
+}
+try{ initScene(document.getElementById('bg')); }
+catch(e){ var el=document.getElementById('err'); el.style.display='block'; el.textContent='3D 씬 오류: '+(e&&e.message||e); console.error(e); }
+</script>
+</body></html>

@@ -1,0 +1,356 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>파편 조립 · AI가 만드는 중 (B형)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#07060d;color:#f3f1fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard','Apple SD Gothic Neo',sans-serif;overflow:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+/* 씬이 자체 주입한 오버레이(일부 시안)는 숨기고, 공용 셸 오버레이(.ui/.err)만 보이게 — 카피 중복 방지 */
+body>div:not(.ui):not(.err):not(.scrim){display:none!important}
+.ui{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:22px 26px}
+.logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#8f48f3,#6f2ce0);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(143,72,243,.5)}
+.brand{font-weight:650;font-size:14.5px;letter-spacing:-.01em}
+.brand span{color:#a79fc7;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:999px;background:rgba(143,72,243,.16);color:#cdb9fb;border:1px solid rgba(143,72,243,.3);backdrop-filter:blur(6px)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:#b78bff;box-shadow:0 0 10px 2px rgba(167,114,245,.8);animation:bp 1.6s infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(26px,4.6vw,44px);font-weight:700;letter-spacing:-.025em;line-height:1.1;text-shadow:0 2px 30px rgba(0,0,0,.6)}
+.lede{color:#b9b3d2;font-size:clamp(13.5px,1.5vw,16px);line-height:1.6;max-width:430px;text-shadow:0 1px 16px rgba(0,0,0,.7)}
+.pct{font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.pct b{font-size:56px}.pct i{font-style:normal;font-size:24px;color:#cdb9fb;margin-left:3px}
+.psub{color:#a79fc7;font-size:13px;font-weight:600;margin-top:2px}
+/* 레이아웃: center = 화면 정중앙(오브 안 %), side = 왼쪽 텍스트, bottom = 하단 왼쪽 */
+.wrap{flex:1;display:flex;position:relative}
+.block{position:absolute;display:flex;flex-direction:column;gap:12px}
+body.center .center-pct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+body.center .copy{left:50%;bottom:11%;transform:translateX(-50%);align-items:center;text-align:center}
+body.side .copy{left:7%;top:50%;transform:translateY(-50%);max-width:46%}
+body.side .center-pct{display:none}
+body.side .copy .pct{margin-top:6px}
+body.bottom .copy{left:6.5%;bottom:9%;max-width:60%}
+body.bottom .center-pct{display:none}
+body.bottom .copy .pct{margin-top:8px}
+/* 센터형은 가운데 큰 % 하나만 — 카피 블록의 중복 %는 숨김 */
+body.center .copy .pct{display:none}
+/* 가독성 스크림: 밝은 3D 위에서도 글자가 읽히게(캔버스 위, UI 아래) */
+.scrim{position:fixed;inset:0;z-index:1;pointer-events:none}
+body.center .scrim{background:radial-gradient(42% 42% at 50% 50%,rgba(7,6,13,.72),rgba(7,6,13,.28) 55%,transparent 72%)}
+body.side .scrim{background:linear-gradient(90deg,rgba(7,6,13,.82) 0%,rgba(7,6,13,.5) 34%,transparent 60%)}
+body.bottom .scrim{background:linear-gradient(0deg,rgba(7,6,13,.9) 0%,rgba(7,6,13,.5) 24%,transparent 46%),linear-gradient(90deg,rgba(7,6,13,.7) 0%,transparent 48%)}
+.bar{height:4px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;width:min(360px,70vw)}
+.bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8f48f3,#b78bff);width:0;transition:width .4s}
+.foot{padding:20px 26px;color:#6f6a88;font-size:12px}
+.err{position:fixed;inset:auto 0 0 0;z-index:5;background:#2a1030;color:#ffd4d4;font-size:12px;padding:8px 14px;display:none}
+@media(prefers-reduced-motion:reduce){.badge .dot{animation:none}}
+</style></head>
+<body class="bottom">
+<canvas id="bg"></canvas>
+<div class="scrim"></div>
+<div class="ui">
+  <div class="top"><div class="logo">N</div><div class="brand">점핑클럽 <span>· 사이트 만들기</span></div></div>
+  <div class="wrap">
+    <div class="center-pct"><div class="pct"><b id="pc">0</b><i>%</i></div><div class="psub">디자인 생성 중</div></div>
+    <div class="block copy">
+      <span class="badge"><span class="dot"></span>8단계 · AI가 만드는 중</span>
+      <h1>디자인을 그리고 있어요</h1>
+      <p class="lede">첫 화면부터 보여드릴게요. 창을 닫아도 계속 만들어지고, 다 되면 이메일로 알려드립니다.</p>
+      <div class="pct" data-copy-pct><b id="pc2">0</b><i>%</i></div>
+      <div class="bar"><i id="barfill"></i></div>
+    </div>
+  </div>
+  <div class="foot">Nophelon — AI 웹사이트 빌더 · 로딩 화면 시안 B3</div>
+</div>
+<div class="err" id="err"></div>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// 진행률(데모) — 0→100 서서히. 오브 중앙 %와 카피 % 동기화.
+(function(){
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var pc=document.getElementById('pc'),pc2=document.getElementById('pc2'),bar=document.getElementById('barfill');
+  var p=0,target=92;
+  function tick(){ p+=Math.max(.15,(target-p)*0.012); if(p>target)p=target; var n=Math.round(p);
+    if(pc)pc.textContent=n; if(pc2)pc2.textContent=n; if(bar)bar.style.width=n+'%';
+    window.__p=p/100; if(!reduce) requestAnimationFrame(tick); }
+  if(reduce){ p=target; if(pc)pc.textContent=target; if(pc2)pc2.textContent=target; if(bar)bar.style.width=target+'%'; window.__p=.92; } else tick();
+})();
+// ── 3D 씬(페이블 작성) ──
+(function(){
+  var PURPLE = 0x8f48f3, LILAC = 0xb78bff, BG = 0x060509;
+
+  function makeGlowTexture(){
+    var c = document.createElement('canvas');
+    c.width = c.height = 128;
+    var g = c.getContext('2d');
+    var grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0.0, 'rgba(255,245,255,1)');
+    grad.addColorStop(0.18, 'rgba(216,180,255,0.85)');
+    grad.addColorStop(0.45, 'rgba(143,72,243,0.32)');
+    grad.addColorStop(1.0, 'rgba(10,6,16,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 128);
+    var tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function smooth(x){ x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); }
+  function mulberry(seed){
+    return function(){
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  window.initScene = function initScene(canvas){
+    var rnd = mulberry(20260817);
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setSize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight, false);
+    renderer.setClearColor(BG, 1);
+
+    var scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(BG, 9, 26);
+
+    var W = canvas.clientWidth || window.innerWidth;
+    var H = canvas.clientHeight || window.innerHeight;
+    var camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 60);
+    camera.position.set(0, 1.6, 11);
+
+    // form sits slightly above center so bottom-left copy stays clear
+    var FORM_Y = 0.55;
+    var group = new THREE.Group();
+    group.position.y = FORM_Y;
+    scene.add(group);
+
+    // ---- lights -------------------------------------------------------
+    scene.add(new THREE.AmbientLight(0x241536, 1.1));
+    var coreLight = new THREE.PointLight(PURPLE, 0.0, 18, 2);
+    coreLight.position.set(0, FORM_Y, 0);
+    scene.add(coreLight);
+    var rim = new THREE.DirectionalLight(LILAC, 1.4);
+    rim.position.set(-4, 5, -6);
+    scene.add(rim);
+    var fill = new THREE.DirectionalLight(0x3a2a6e, 0.5);
+    fill.position.set(5, -2, 4);
+    scene.add(fill);
+
+    // ---- fragments ----------------------------------------------------
+    var COUNT = 96;
+    var geoTet = new THREE.TetrahedronGeometry(1, 0);
+    var geoBox = new THREE.BoxGeometry(1, 1, 1);
+    var frags = [];
+    var up = new THREE.Vector3(0, 1, 0);
+    var tmpM = new THREE.Matrix4();
+    var tmpQ = new THREE.Quaternion();
+
+    // target slots: two fibonacci shells -> an airy spherical scaffold
+    var golden = Math.PI * (3 - Math.sqrt(5));
+    for (var i = 0; i < COUNT; i++){
+      var shellOuter = i % 3 !== 0;            // 2/3 outer shell, 1/3 inner
+      var n = shellOuter ? 64 : 32;
+      var j = shellOuter ? Math.floor(i * 2 / 3) : Math.floor(i / 3);
+      var y = 1 - (j + 0.5) / n * 2;
+      var r = Math.sqrt(Math.max(0, 1 - y * y));
+      var th = golden * j + (shellOuter ? 0 : 1.7);
+      var R = shellOuter ? 2.3 : 1.45;
+      var target = new THREE.Vector3(Math.cos(th) * r * R, y * R, Math.sin(th) * r * R);
+
+      // scattered start: wide shell around the void
+      var sv = new THREE.Vector3(rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1).normalize();
+      var scatter = sv.multiplyScalar(7.5 + rnd() * 6.5);
+      scatter.y *= 0.75;
+
+      var useTet = rnd() < 0.62;
+      var mat = new THREE.MeshStandardMaterial({
+        color: 0x17101f,
+        roughness: 0.32,
+        metalness: 0.62,
+        flatShading: true,
+        emissive: new THREE.Color(rnd() < 0.35 ? LILAC : PURPLE),
+        emissiveIntensity: 0.05
+      });
+      var mesh = new THREE.Mesh(useTet ? geoTet : geoBox, mat);
+      var s = 0.1 + rnd() * 0.16;
+      if (!useTet) mesh.scale.set(s * (0.6 + rnd()), s * 0.55, s * (0.6 + rnd() * 1.6));
+      else mesh.scale.setScalar(s * 1.25);
+
+      // assembled orientation: face outward from center (designed, crystalline)
+      tmpM.lookAt(target, new THREE.Vector3(0, 0, 0), up);
+      var qT = new THREE.Quaternion().setFromRotationMatrix(tmpM);
+      var qS = new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd() * 6.28, rnd() * 6.28, rnd() * 6.28));
+
+      group.add(mesh);
+      frags.push({
+        mesh: mesh, mat: mat,
+        scatter: scatter, target: target,
+        qS: qS, qT: qT,
+        delay: rnd() * 0.42,            // staggered, deliberate convergence
+        span: 0.48 + rnd() * 0.22,
+        swirl: (rnd() - 0.5) * 1.6,
+        bob: rnd() * 6.28,
+        glowBias: 0.6 + rnd() * 0.8
+      });
+    }
+
+    // ---- central core + additive glow --------------------------------
+    var glowTex = makeGlowTexture();
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex, blending: THREE.AdditiveBlending,
+      transparent: true, depthWrite: false, color: 0xcfaaff, opacity: 0.0
+    }));
+    glow.position.y = FORM_Y;
+    glow.scale.setScalar(4);
+    scene.add(glow);
+
+    var haloBack = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex, blending: THREE.AdditiveBlending,
+      transparent: true, depthWrite: false, color: 0x4a2a8f, opacity: 0.22
+    }));
+    haloBack.position.set(0, FORM_Y, -3.5);
+    haloBack.scale.setScalar(13);
+    scene.add(haloBack);
+
+    var coreMat = new THREE.MeshStandardMaterial({
+      color: 0x120b1c, roughness: 0.2, metalness: 0.8, flatShading: true,
+      emissive: new THREE.Color(LILAC), emissiveIntensity: 0.3
+    });
+    var core = new THREE.Mesh(geoTet, coreMat);
+    core.scale.setScalar(0.42);
+    group.add(core);
+
+    // ---- drifting dust (modest point count) ---------------------------
+    var DUST = 260;
+    var dPos = new Float32Array(DUST * 3);
+    for (var d = 0; d < DUST; d++){
+      var dv = new THREE.Vector3(rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1).normalize()
+        .multiplyScalar(2.8 + rnd() * 7);
+      dPos[d * 3] = dv.x; dPos[d * 3 + 1] = dv.y * 0.8; dPos[d * 3 + 2] = dv.z;
+    }
+    var dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+    var dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+      color: PURPLE, size: 0.045, transparent: true, opacity: 0.45,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
+    }));
+    dust.position.y = FORM_Y;
+    scene.add(dust);
+
+    // ---- assembly timeline --------------------------------------------
+    // 14s loop: build 0-4.6 | hold 4.6-8.8 | disperse 8.8-12.2 | void 12.2-14
+    function autoAssembly(t){
+      var u = t % 14;
+      if (u < 4.6)  return smooth(u / 4.6);
+      if (u < 8.8)  return 1;
+      if (u < 12.2) return 1 - smooth((u - 8.8) / 3.4);
+      return 0;
+    }
+    function assemblyAt(t){
+      var a = autoAssembly(t);
+      var p = typeof window.__p === 'number' ? Math.min(1, Math.max(0, window.__p)) : 0;
+      return Math.max(a, smooth(p));   // progress biases toward completion
+    }
+
+    var vA = new THREE.Vector3(), vB = new THREE.Vector3();
+
+    function layout(t){
+      var a = assemblyAt(t);
+      var swirlAll = t * 0.05;
+
+      for (var i = 0; i < frags.length; i++){
+        var f = frags[i];
+        var k = smooth((a - f.delay) / f.span);           // per-fragment eased progress
+        var m = f.mesh;
+
+        // scattered cloud slowly revolves; adds life to the void state
+        var ang = swirlAll + f.swirl * 0.2;
+        var c = Math.cos(ang), s = Math.sin(ang);
+        vA.set(f.scatter.x * c - f.scatter.z * s,
+               f.scatter.y + Math.sin(t * 0.4 + f.bob) * 0.35,
+               f.scatter.x * s + f.scatter.z * c);
+
+        // assembled slot breathes almost imperceptibly
+        var br = 1 + Math.sin(t * 0.9 + f.bob) * 0.012;
+        vB.copy(f.target).multiplyScalar(br);
+
+        // curved approach: lift mid-flight so paths arc, not beeline
+        m.position.lerpVectors(vA, vB, k);
+        var arc = Math.sin(k * Math.PI);
+        m.position.y += arc * 0.6 * (f.swirl);
+        m.position.x += arc * 0.4 * Math.sin(f.bob);
+
+        tmpQ.slerpQuaternions(f.qS, f.qT, k);
+        m.quaternion.copy(tmpQ);
+        if (k < 0.999) m.rotateOnAxis(up, (1 - k) * t * f.swirl * 0.3);
+
+        // purple edges ignite as pieces seat into place
+        var flick = 0.92 + 0.08 * Math.sin(t * 7 + f.bob * 3);
+        f.mat.emissiveIntensity = (0.05 + k * k * 1.15 * f.glowBias) * flick;
+      }
+
+      // assembled scaffold rotates as one designed object
+      group.rotation.y = t * 0.12;
+      group.rotation.x = Math.sin(t * 0.1) * 0.05;
+
+      // core + glow intensity ride the assembly
+      var pulse = 0.85 + 0.15 * Math.sin(t * 1.7);
+      coreLight.intensity = a * 3.2 * pulse + 0.25;
+      coreMat.emissiveIntensity = 0.3 + a * 2.2 * pulse;
+      core.rotation.set(t * 0.5, t * 0.33, 0);
+      core.scale.setScalar(0.42 * (0.7 + a * 0.5 * pulse));
+      glow.material.opacity = 0.12 + a * 0.75 * pulse;
+      glow.scale.setScalar(2.6 + a * 2.6 * pulse);
+
+      dust.rotation.y = t * 0.02;
+      dust.material.opacity = 0.25 + (1 - a) * 0.3;
+
+      // slow orbital drift, framing the form center/upper
+      var ca = t * 0.07;
+      camera.position.set(Math.sin(ca) * 10.5, 1.5 + Math.sin(t * 0.13) * 0.5, Math.cos(ca) * 10.5);
+      camera.lookAt(0, FORM_Y + 0.15, 0);
+    }
+
+    function onResize(){
+      var w = canvas.clientWidth || window.innerWidth;
+      var h = canvas.clientHeight || window.innerHeight;
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      if (reduced) renderStill();
+    }
+    window.addEventListener('resize', onResize);
+
+    var reduced = false;
+    try {
+      reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) { reduced = false; }
+
+    function renderStill(){
+      // fully assembled, lit, single frame
+      var hold = 6.0;                  // a timestamp inside the "hold" phase
+      for (var i = 0; i < frags.length; i++) frags[i].delay = 0;
+      layout(hold);
+      renderer.render(scene, camera);
+    }
+
+    if (reduced){
+      renderStill();
+      return;
+    }
+
+    var clock = new THREE.Clock();
+    (function loop(){
+      requestAnimationFrame(loop);
+      layout(clock.getElapsedTime());
+      renderer.render(scene, camera);
+    })();
+  };
+})();
+try{ initScene(document.getElementById('bg')); }
+catch(e){ var el=document.getElementById('err'); el.style.display='block'; el.textContent='3D 씬 오류: '+(e&&e.message||e); console.error(e); }
+</script>
+</body></html>

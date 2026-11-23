@@ -1,0 +1,338 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>구체 재조립 · AI가 만드는 중 (A형)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#07060d;color:#f3f1fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard','Apple SD Gothic Neo',sans-serif;overflow:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+/* 씬이 자체 주입한 오버레이(일부 시안)는 숨기고, 공용 셸 오버레이(.ui/.err)만 보이게 — 카피 중복 방지 */
+body>div:not(.ui):not(.err):not(.scrim){display:none!important}
+.ui{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:22px 26px}
+.logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#8f48f3,#6f2ce0);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 4px 14px rgba(143,72,243,.5)}
+.brand{font-weight:650;font-size:14.5px;letter-spacing:-.01em}
+.brand span{color:#a79fc7;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:999px;background:rgba(143,72,243,.16);color:#cdb9fb;border:1px solid rgba(143,72,243,.3);backdrop-filter:blur(6px)}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:#b78bff;box-shadow:0 0 10px 2px rgba(167,114,245,.8);animation:bp 1.6s infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(26px,4.6vw,44px);font-weight:700;letter-spacing:-.025em;line-height:1.1;text-shadow:0 2px 30px rgba(0,0,0,.6)}
+.lede{color:#b9b3d2;font-size:clamp(13.5px,1.5vw,16px);line-height:1.6;max-width:430px;text-shadow:0 1px 16px rgba(0,0,0,.7)}
+.pct{font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.pct b{font-size:56px}.pct i{font-style:normal;font-size:24px;color:#cdb9fb;margin-left:3px}
+.psub{color:#a79fc7;font-size:13px;font-weight:600;margin-top:2px}
+/* 레이아웃: center = 화면 정중앙(오브 안 %), side = 왼쪽 텍스트, bottom = 하단 왼쪽 */
+.wrap{flex:1;display:flex;position:relative}
+.block{position:absolute;display:flex;flex-direction:column;gap:12px}
+body.center .center-pct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+body.center .copy{left:50%;bottom:11%;transform:translateX(-50%);align-items:center;text-align:center}
+body.side .copy{left:7%;top:50%;transform:translateY(-50%);max-width:46%}
+body.side .center-pct{display:none}
+body.side .copy .pct{margin-top:6px}
+body.bottom .copy{left:6.5%;bottom:9%;max-width:60%}
+body.bottom .center-pct{display:none}
+body.bottom .copy .pct{margin-top:8px}
+/* 센터형은 가운데 큰 % 하나만 — 카피 블록의 중복 %는 숨김 */
+body.center .copy .pct{display:none}
+/* 가독성 스크림: 밝은 3D 위에서도 글자가 읽히게(캔버스 위, UI 아래) */
+.scrim{position:fixed;inset:0;z-index:1;pointer-events:none}
+body.center .scrim{background:radial-gradient(42% 42% at 50% 50%,rgba(7,6,13,.72),rgba(7,6,13,.28) 55%,transparent 72%)}
+body.side .scrim{background:linear-gradient(90deg,rgba(7,6,13,.82) 0%,rgba(7,6,13,.5) 34%,transparent 60%)}
+body.bottom .scrim{background:linear-gradient(0deg,rgba(7,6,13,.9) 0%,rgba(7,6,13,.5) 24%,transparent 46%),linear-gradient(90deg,rgba(7,6,13,.7) 0%,transparent 48%)}
+.bar{height:4px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;width:min(360px,70vw)}
+.bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8f48f3,#b78bff);width:0;transition:width .4s}
+.foot{padding:20px 26px;color:#6f6a88;font-size:12px}
+.err{position:fixed;inset:auto 0 0 0;z-index:5;background:#2a1030;color:#ffd4d4;font-size:12px;padding:8px 14px;display:none}
+@media(prefers-reduced-motion:reduce){.badge .dot{animation:none}}
+</style></head>
+<body class="center">
+<canvas id="bg"></canvas>
+<div class="scrim"></div>
+<div class="ui">
+  <div class="top"><div class="logo">N</div><div class="brand">점핑클럽 <span>· 사이트 만들기</span></div></div>
+  <div class="wrap">
+    <div class="center-pct"><div class="pct"><b id="pc">0</b><i>%</i></div><div class="psub">디자인 생성 중</div></div>
+    <div class="block copy">
+      <span class="badge"><span class="dot"></span>8단계 · AI가 만드는 중</span>
+      <h1>디자인을 그리고 있어요</h1>
+      <p class="lede">첫 화면부터 보여드릴게요. 창을 닫아도 계속 만들어지고, 다 되면 이메일로 알려드립니다.</p>
+      <div class="pct" data-copy-pct><b id="pc2">0</b><i>%</i></div>
+      <div class="bar"><i id="barfill"></i></div>
+    </div>
+  </div>
+  <div class="foot">Nophelon — AI 웹사이트 빌더 · 로딩 화면 시안 A5</div>
+</div>
+<div class="err" id="err"></div>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// 진행률(데모) — 0→100 서서히. 오브 중앙 %와 카피 % 동기화.
+(function(){
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var pc=document.getElementById('pc'),pc2=document.getElementById('pc2'),bar=document.getElementById('barfill');
+  var p=0,target=92;
+  function tick(){ p+=Math.max(.15,(target-p)*0.012); if(p>target)p=target; var n=Math.round(p);
+    if(pc)pc.textContent=n; if(pc2)pc2.textContent=n; if(bar)bar.style.width=n+'%';
+    window.__p=p/100; if(!reduce) requestAnimationFrame(tick); }
+  if(reduce){ p=target; if(pc)pc.textContent=target; if(pc2)pc2.textContent=target; if(bar)bar.style.width=target+'%'; window.__p=.92; } else tick();
+})();
+// ── 3D 씬(페이블 작성) ──
+function initScene(canvas) {
+  var PALETTE = [0x8f48f3, 0xb78bff, 0xd9c2ff, 0x5a28c2];
+  var WEIGHTS = [0.45, 0.30, 0.07, 0.18];
+  var COUNT = 3600;
+  var SHELL_R = 1.62;
+
+  var reduced = false;
+  try {
+    reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {}
+
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setClearColor(0x07060d, 1);
+
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x07060d, 0.055);
+
+  var camera = new THREE.PerspectiveCamera(50, 1, 0.1, 60);
+  camera.position.set(0, 0.15, 4.7);
+  camera.lookAt(0, 0, 0);
+
+  var group = new THREE.Group();
+  scene.add(group);
+
+  // ---- soft round gradient sprite (tiny offscreen canvas) ----
+  function makeSprite() {
+    var c = document.createElement('canvas');
+    c.width = c.height = 64;
+    var ctx = c.getContext('2d');
+    var g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0.0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.25, 'rgba(255,255,255,0.85)');
+    g.addColorStop(0.55, 'rgba(255,255,255,0.28)');
+    g.addColorStop(1.0, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    var tex = new THREE.CanvasTexture(c);
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    return tex;
+  }
+
+  function pickColor() {
+    var r = Math.random(), acc = 0;
+    for (var i = 0; i < WEIGHTS.length; i++) {
+      acc += WEIGHTS[i];
+      if (r <= acc) return PALETTE[i];
+    }
+    return PALETTE[0];
+  }
+
+  // ---- geometry: fibonacci sphere SHELL targets + scattered chaos origins ----
+  var targets = new Float32Array(COUNT * 3);
+  var chaos = new Float32Array(COUNT * 3);
+  var seeds = new Float32Array(COUNT);
+  var sizes = new Float32Array(COUNT);
+  var colors = new Float32Array(COUNT * 3);
+  var col = new THREE.Color();
+  var GA = Math.PI * (3 - Math.sqrt(5)); // golden angle
+
+  for (var i = 0; i < COUNT; i++) {
+    var y = 1 - (i / (COUNT - 1)) * 2;
+    var rad = Math.sqrt(Math.max(0, 1 - y * y));
+    var th = GA * i;
+    var shell = SHELL_R * (1 + (Math.random() - 0.5) * 0.045); // thin shell, hollow center
+    targets[i * 3]     = Math.cos(th) * rad * shell;
+    targets[i * 3 + 1] = y * shell;
+    targets[i * 3 + 2] = Math.sin(th) * rad * shell;
+
+    // chaos: random far direction, radius 3.6..8.5
+    var u = Math.random() * 2 - 1;
+    var ph = Math.random() * Math.PI * 2;
+    var ru = Math.sqrt(Math.max(0, 1 - u * u));
+    var cr = 3.6 + Math.pow(Math.random(), 0.8) * 4.9;
+    chaos[i * 3]     = Math.cos(ph) * ru * cr;
+    chaos[i * 3 + 1] = u * cr;
+    chaos[i * 3 + 2] = Math.sin(ph) * ru * cr;
+
+    seeds[i] = Math.random();
+    sizes[i] = 0.9 + Math.pow(Math.random(), 2.4) * 1.7;
+
+    col.setHex(pickColor());
+    colors[i * 3] = col.r;
+    colors[i * 3 + 1] = col.g;
+    colors[i * 3 + 2] = col.b;
+  }
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(targets, 3));
+  geo.setAttribute('aChaos', new THREE.BufferAttribute(chaos, 3));
+  geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+  geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+  geo.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
+  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 12);
+
+  var uniforms = {
+    uTime:   { value: 0 },
+    uGather: { value: 0 },
+    uPix:    { value: 1 },
+    uMap:    { value: makeSprite() }
+  };
+
+  var mat = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexShader: [
+      'attribute vec3 aChaos;',
+      'attribute float aSeed;',
+      'attribute float aSize;',
+      'attribute vec3 aColor;',
+      'uniform float uTime;',
+      'uniform float uGather;',
+      'uniform float uPix;',
+      'varying vec3 vColor;',
+      'varying float vAlpha;',
+      'void main(){',
+      '  float t0 = aSeed * 0.42;',
+      '  float e = smoothstep(t0, t0 + 0.58, uGather);', // staggered arrival
+      '  float ee = e * e * (3.0 - 2.0 * e);',
+      // drifting chaos cloud so the scattered state is alive
+      '  vec3 c = aChaos;',
+      '  float dr = (1.0 - ee);',
+      '  c += dr * 0.35 * vec3(',
+      '    sin(uTime * 0.31 + aSeed * 17.0),',
+      '    cos(uTime * 0.27 + aSeed * 23.0),',
+      '    sin(uTime * 0.23 + aSeed * 29.0));',
+      // curved flight path (arc) toward the shell
+      '  vec3 p = mix(c, position, ee);',
+      '  vec3 flight = position - aChaos;',
+      '  vec3 side = normalize(cross(flight, vec3(0.57, 1.0, 0.33)) + vec3(0.0001));',
+      '  p += side * sin(ee * 3.14159265) * (0.35 + aSeed * 0.75);',
+      // gentle breathing of the assembled shell
+      '  p += normalize(position) * sin(uTime * 1.25 + aSeed * 6.2831) * 0.035 * ee;',
+      '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
+      '  float tw = 0.78 + 0.22 * sin(uTime * 2.1 + aSeed * 43.7);',
+      '  vAlpha = (0.07 + 0.46 * ee) * tw;',
+      '  vColor = aColor * (0.5 + 0.5 * ee);',
+      '  gl_PointSize = aSize * uPix * (82.0 / -mv.z) * (0.6 + 0.45 * ee);',
+      '  gl_Position = projectionMatrix * mv;',
+      '}'
+    ].join('\n'),
+    fragmentShader: [
+      'uniform sampler2D uMap;',
+      'varying vec3 vColor;',
+      'varying float vAlpha;',
+      'void main(){',
+      '  vec4 tex = texture2D(uMap, gl_PointCoord);',
+      '  gl_FragColor = vec4(vColor, 1.0) * tex * vAlpha;',
+      '}'
+    ].join('\n')
+  });
+
+  var points = new THREE.Points(geo, mat);
+  group.add(points);
+
+  // ---- faint wireframe sphere, strengthens when assembled ----
+  var wireGeo = new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(SHELL_R * 0.985, 2));
+  var wireMat = new THREE.LineBasicMaterial({
+    color: 0x5a28c2,
+    transparent: true,
+    opacity: 0.0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  var wire = new THREE.LineSegments(wireGeo, wireMat);
+  group.add(wire);
+
+  var wireGeo2 = new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(SHELL_R * 1.12, 1));
+  var wireMat2 = new THREE.LineBasicMaterial({
+    color: 0x8f48f3,
+    transparent: true,
+    opacity: 0.0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  var wire2 = new THREE.LineSegments(wireGeo2, wireMat2);
+  group.add(wire2);
+
+  // ---- sizing ----
+  function resize() {
+    var w = canvas.clientWidth || canvas.parentNode && canvas.parentNode.clientWidth || window.innerWidth;
+    var h = canvas.clientHeight || canvas.parentNode && canvas.parentNode.clientHeight || window.innerHeight;
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    uniforms.uPix.value = dpr;
+    if (reduced) renderer.render(scene, camera);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---- assembly driver: autonomous gather/scatter + optional window.__p ----
+  var PERIOD = 10.5;
+  function autoGather(t) {
+    var ph = (t % PERIOD) / PERIOD;
+    var up = ph < 0.34 ? smooth01(ph / 0.34) : 1.0;          // assemble
+    var down = ph > 0.62 ? smooth01((ph - 0.62) / 0.26) : 0; // disperse
+    return Math.max(0, up * (1 - down));
+  }
+  function smooth01(x) {
+    x = Math.min(1, Math.max(0, x));
+    return x * x * (3 - 2 * x);
+  }
+  function progress() {
+    var p = window.__p;
+    if (typeof p !== 'number' || isNaN(p)) return 0;
+    return Math.min(1, Math.max(0, p));
+  }
+
+  if (reduced) {
+    // one static assembled frame
+    uniforms.uGather.value = 1;
+    uniforms.uTime.value = 0;
+    wireMat.opacity = 0.16;
+    wireMat2.opacity = 0.05;
+    group.rotation.y = 0.6;
+    group.rotation.x = 0.12;
+    renderer.render(scene, camera);
+    return;
+  }
+
+  var clock = new THREE.Clock();
+
+  function tick() {
+    requestAnimationFrame(tick);
+    var dt = Math.min(0.05, clock.getDelta());
+    var t = clock.elapsedTime;
+
+    var p = progress();
+    // generation progress sets a floor under the loop; at 100% the sphere locks in
+    var floor = p >= 1 ? 1 : p * 0.85;
+    var g = Math.max(autoGather(t), floor);
+
+    uniforms.uTime.value = t;
+    uniforms.uGather.value += (g - uniforms.uGather.value) * Math.min(1, dt * 6);
+    var gs = uniforms.uGather.value;
+
+    wireMat.opacity = 0.015 + 0.15 * gs * gs;
+    wireMat2.opacity = 0.05 * gs * gs * (0.7 + 0.3 * Math.sin(t * 0.9));
+
+    group.rotation.y += dt * (0.10 + 0.06 * (1 - gs));
+    group.rotation.x = 0.12 + Math.sin(t * 0.17) * 0.05;
+    wire2.rotation.y -= dt * 0.04;
+    wire2.rotation.z += dt * 0.02;
+
+    camera.position.z = 4.7 - 0.18 * gs;
+    camera.lookAt(0, 0, 0);
+
+    renderer.render(scene, camera);
+  }
+  tick();
+}
+try{ initScene(document.getElementById('bg')); }
+catch(e){ var el=document.getElementById('err'); el.style.display='block'; el.textContent='3D 씬 오류: '+(e&&e.message||e); console.error(e); }
+</script>
+</body></html>
